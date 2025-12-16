@@ -222,7 +222,7 @@ const ChatInterface = () => {
             <div className="header-info">
               <h2>Appointment Assistant</h2>
               <span className={`status-text ${isConnected ? 'status-online' : 'status-offline'}`}>
-                {isConnected ? 'Online' : 'Offline'}
+                {isConnected ? 'Online' : 'Disconnected'}
               </span>
             </div>
           </div>

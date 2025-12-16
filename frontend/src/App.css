@@ -6,5 +6,16 @@
   align-items: center;
   background: #000000;
   padding: 20px;
+  overflow: hidden;
+  min-height: -webkit-fill-available;
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: 0;
+    align-items: center;
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
 }
 
