@@ -344,6 +344,41 @@
   justify-content: flex-start;
 }
 
+/* Action Buttons for action1 message type */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.action-button {
+  background: rgba(239, 106, 54, 0.15);
+  border: 1px solid rgba(239, 106, 54, 0.3);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #ef6a36;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: 'Gilroy', sans-serif;
+  width: 100%;
+}
+
+.action-button:hover {
+  background: rgba(239, 106, 54, 0.25);
+  border-color: rgba(239, 106, 54, 0.5);
+  transform: translateX(2px);
+}
+
+.action-button:active {
+  background: rgba(239, 106, 54, 0.35);
+  transform: translateX(0);
+}
+
 /* Input Area */
 .input-area {
   padding: 16px;

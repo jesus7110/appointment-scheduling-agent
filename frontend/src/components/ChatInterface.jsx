@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ChatInterface.css';
 import LoadingAnimation from './LoadingAnimation';
-import ActionButtons from './ActionButtons';
+import { getBotResponse, resetMockAPI } from '../mockAPI';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      msg_type: 'text',
-      text: "Hello! I'm here to help you schedule an appointment. How can I assist you today?",
+      msg_type: "text",
+      data: {
+        msg_body: "Hello! I'm here to help you schedule an appointment. How can I assist you today?"
+      },
       sender: 'bot',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -47,11 +49,14 @@ const ChatInterface = () => {
   }, [showMenu]);
 
   const handleRestart = () => {
+    resetMockAPI();
     setMessages([
       {
         id: 1,
-        msg_type: 'text',
-        text: "Hello! I'm here to help you schedule an appointment. How can I assist you today?",
+        msg_type: "text",
+        data: {
+          msg_body: "Hello! I'm here to help you schedule an appointment. How can I assist you today?"
+        },
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
@@ -82,47 +87,29 @@ const ChatInterface = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
-      setMessages(prev => [...prev, userMessage]);
+      setMessages([...messages, userMessage]);
       const userInput = inputValue;
       setInputValue('');
       setIsLoading(true);
 
       try {
-        // Call the backend API
-        const response = await fetch('http://localhost:8000/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: userInput,
-            conversation_id: null
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to get response from server');
-        }
-
-        const data = await response.json();
-        
-        // Create bot message from structured response
+        // Get structured response from mock API
+        const response = await getBotResponse(userInput);
         const botMessage = {
           id: messages.length + 2,
-          msg_type: data.msg_type,
-          text: data.data.msg_body,
+          ...response,
           sender: 'bot',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          ...(data.msg_type === 'action1' && { actions: data.data.action })
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
-        
         setMessages(prev => [...prev, botMessage]);
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('Error getting bot response:', error);
         const errorMessage = {
           id: messages.length + 2,
-          msg_type: 'text',
-          text: "Sorry, I'm having trouble connecting. Please try again.",
+          msg_type: "text",
+          data: {
+            msg_body: "Sorry, I encountered an error. Please try again."
+          },
           sender: 'bot',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -133,60 +120,47 @@ const ChatInterface = () => {
     }
   };
 
-  const handleActionClick = async (value, label) => {
-    // Add user's selection as a message
-    const selectionMessage = {
+  const handleActionClick = (actionKey, actionValue) => {
+    // When user clicks an action button, send it as a user message
+    const userMessage = {
       id: messages.length + 1,
-      text: `Selected: ${label}`,
+      text: actionKey,
       sender: 'user',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isAction: true,
+      actionValue: actionValue
     };
     
-    setMessages(prev => [...prev, selectionMessage]);
+    setMessages([...messages, userMessage]);
     setIsLoading(true);
 
-    try {
-      // Send the selected action to the backend
-      const response = await fetch('http://localhost:8000/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `I selected: ${value}`,
-          conversation_id: null
-        })
+    // Get next bot response
+    getBotResponse(actionKey)
+      .then((response) => {
+        const botMessage = {
+          id: messages.length + 2,
+          ...response,
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, botMessage]);
+      })
+      .catch((error) => {
+        console.error('Error getting bot response:', error);
+        const errorMessage = {
+          id: messages.length + 2,
+          msg_type: "text",
+          data: {
+            msg_body: "Sorry, I encountered an error. Please try again."
+          },
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response from server');
-      }
-
-      const data = await response.json();
-      
-      const botMessage = {
-        id: messages.length + 2,
-        msg_type: data.msg_type,
-        text: data.data.msg_body,
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        ...(data.msg_type === 'action1' && { actions: data.data.action })
-      };
-      
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error processing action:', error);
-      const errorMessage = {
-        id: messages.length + 2,
-        msg_type: 'text',
-        text: "Sorry, I'm having trouble processing your selection. Please try again.",
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleKeyPress = (e) => {
@@ -274,14 +248,47 @@ const ChatInterface = () => {
               className={`message ${message.sender === 'user' ? 'message-user' : 'message-bot'}`}
             >
               <div className="message-bubble">
-                <p className="message-text">{message.text}</p>
-                {message.msg_type === 'action1' && message.actions && (
-                  <ActionButtons 
-                    actions={message.actions} 
-                    onActionClick={handleActionClick}
-                  />
+                {message.sender === 'user' ? (
+                  // User messages (simple text)
+                  <>
+                    <p className="message-text">{message.text}</p>
+                    <span className="message-time">{message.timestamp}</span>
+                  </>
+                ) : (
+                  // Bot messages (structured: text or action1)
+                  <>
+                    {message.msg_type === 'text' ? (
+                      // Simple text message
+                      <>
+                        <p className="message-text">{message.data.msg_body}</p>
+                        <span className="message-time">{message.timestamp}</span>
+                      </>
+                    ) : message.msg_type === 'action1' ? (
+                      // Action message with selectable buttons
+                      <>
+                        <p className="message-text">{message.data.msg_body}</p>
+                        <div className="action-buttons">
+                          {message.data.action && message.data.action.map((action, index) => (
+                            <button
+                              key={index}
+                              className="action-button"
+                              onClick={() => handleActionClick(action.key, action.value)}
+                            >
+                              {action.key}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="message-time">{message.timestamp}</span>
+                      </>
+                    ) : (
+                      // Fallback for unknown message types
+                      <>
+                        <p className="message-text">{message.text || JSON.stringify(message.data)}</p>
+                        <span className="message-time">{message.timestamp}</span>
+                      </>
+                    )}
+                  </>
                 )}
-                <span className="message-time">{message.timestamp}</span>
               </div>
             </div>
           ))}
