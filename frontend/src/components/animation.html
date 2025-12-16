@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Animation</title>
+    <style>
+        /* 1. Basic Reset and Centering */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9; /* Light grey background */
+            font-family: sans-serif;
+        }
+
+        /* 2. Loader Container */
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* 3. The SVG Styling */
+        .loader-icon {
+            width: 80px;  /* Adjust size here */
+            height: 80px;
+            
+            /* The Animation Logic */
+            /* name | duration | timing-function | iteration-count */
+            animation: rotate-pause 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+        }
+
+        /* 4. The Animation Keyframes */
+        @keyframes rotate-pause {
+            /* Phase 1: Start at 0 degrees */
+            0% {
+                transform: rotate(0deg);
+            }
+            /* Phase 2: Rotate to 360 degrees quickly (by 60% of the time) */
+            60% {
+                transform: rotate(360deg);
+            }
+            /* Phase 3: Stay at 360 degrees (Pause) until 100% of time is up */
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Text styling */
+        .loading-text {
+            color: #333;
+            font-weight: bold;
+            letter-spacing: 1px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loader-container" id="loader">
+        <svg class="loader-icon" fill="#ef6a36" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+            <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+            <g id="SVGRepo_iconCarrier">
+                <title>ionicons-v5-n</title>
+                <polygon points="351.9 256 460 193.6 412 110.4 304 172.8 304 48 208 48 208 172.8 100 110.4 52 193.6 160.1 256 52 318.4 100 401.6 208 339.2 208 464 304 464 304 339.2 412 401.6 460 318.4 351.9 256"></polygon>
+            </g>
+        </svg>
+        
+        <div class="loading-text">LOADING</div>
+    </div>
+
+    <script>
+        // JS is not strictly needed for the loop, 
+        // but here is how you would control it (e.g., hide it when data loads)
+        
+        console.log("Loader started...");
+
+        // Example: Stop/Hide the loader after 5 seconds to simulate a page load
+        /*
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.display = 'none';
+                console.log("Loading complete");
+            }, 5000); 
+        });
+        */
+    </script>
+</body>
+</html>

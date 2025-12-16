@@ -1,0 +1,70 @@
+/* Loader Container */
+.loader-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.thinking-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.dots {
+  display: inline-block;
+}
+
+.dots span {
+  animation: dot 1.4s infinite;
+  animation-delay: 0s;
+  opacity: 0;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot {
+  0%, 20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The SVG Styling - Match text size (15px) */
+.loader-icon {
+  width: 15px;
+  height: 15px;
+  /* The Animation Logic */
+  /* name | duration | timing-function | iteration-count */
+  animation: rotate-pause 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+/* The Animation Keyframes */
+@keyframes rotate-pause {
+  /* Phase 1: Start at 0 degrees */
+  0% {
+    transform: rotate(0deg);
+  }
+  /* Phase 2: Rotate to 360 degrees quickly (by 60% of the time) */
+  60% {
+    transform: rotate(360deg);
+  }
+  /* Phase 3: Stay at 360 degrees (Pause) until 100% of time is up */
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
