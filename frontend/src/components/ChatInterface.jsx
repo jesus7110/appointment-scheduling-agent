@@ -120,7 +120,14 @@ const ChatInterface = () => {
     }
   };
 
-  const handleActionClick = (actionKey, actionValue) => {
+  const handleActionClick = (messageId, actionKey, actionValue) => {
+    // Disable all buttons for this specific message
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId && msg.msg_type === 'action1'
+        ? { ...msg, actionsDisabled: true, selectedAction: actionKey }
+        : msg
+    ));
+
     // When user clicks an action button, send it as a user message
     const userMessage = {
       id: messages.length + 1,
@@ -131,7 +138,7 @@ const ChatInterface = () => {
       actionValue: actionValue
     };
     
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     // Get next bot response
@@ -271,8 +278,9 @@ const ChatInterface = () => {
                           {message.data.action && message.data.action.map((action, index) => (
                             <button
                               key={index}
-                              className="action-button"
-                              onClick={() => handleActionClick(action.key, action.value)}
+                              className={`action-button ${message.actionsDisabled ? 'action-button-disabled' : ''} ${message.selectedAction === action.key ? 'action-button-selected' : ''}`}
+                              onClick={() => !message.actionsDisabled && handleActionClick(message.id, action.key, action.value)}
+                              disabled={message.actionsDisabled}
                             >
                               {action.key}
                             </button>

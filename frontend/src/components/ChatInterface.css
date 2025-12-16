@@ -379,6 +379,24 @@
   transform: translateX(0);
 }
 
+.action-button:disabled,
+.action-button-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.action-button-disabled:hover {
+  background: rgba(239, 106, 54, 0.15);
+  border-color: rgba(239, 106, 54, 0.3);
+  transform: none;
+}
+
+.action-button-selected {
+  background: rgba(239, 106, 54, 0.3);
+  border-color: rgba(239, 106, 54, 0.6);
+}
+
 /* Input Area */
 .input-area {
   padding: 16px;
