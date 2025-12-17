@@ -4,5 +4,6 @@ python-dotenv
 litellm
 google-generativeai
 pydantic[email]
+requests
 pytest
 pytest-asyncio
