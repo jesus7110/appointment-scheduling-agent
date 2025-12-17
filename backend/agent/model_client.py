@@ -1,0 +1,206 @@
+"""
+Provider-agnostic LLM client for the appointment scheduling agent.
+
+This module provides a unified interface to interact with various LLM providers
+(OpenAI, Google Gemini, Anthropic Claude, etc.) without vendor lock-in.
+
+To switch providers, simply change the LLM_PROVIDER and LLM_MODEL environment variables.
+"""
+import os
+from typing import List, Dict, Optional, Any
+from dotenv import load_dotenv
+import litellm
+from litellm import completion
+
+# Load environment variables
+load_dotenv()
+
+# Configure LiteLLM
+litellm.set_verbose = os.getenv("LITELLM_VERBOSE", "false").lower() == "true"
+
+
+class ModelClient:
+    """
+    Provider-agnostic LLM client wrapper.
+    
+    Supports multiple providers through LiteLLM:
+    - OpenAI: gpt-4, gpt-3.5-turbo, etc.
+    - Google: gemini/gemini-2.0-flash, gemini/gemini-pro, etc.
+    - Anthropic: claude-3-5-sonnet, claude-3-opus, etc.
+    - And many more...
+    
+    Environment variables:
+        LLM_PROVIDER: Provider name (e.g., "openai", "google", "anthropic")
+        LLM_MODEL: Model identifier (e.g., "gpt-4o-mini", "gemini/gemini-2.0-flash")
+        LLM_API_KEY: API key for the provider
+        LLM_TEMPERATURE: Temperature for generation (default: 0.7)
+        LLM_MAX_TOKENS: Maximum tokens to generate (default: 1000)
+    """
+    
+    def __init__(
+        self,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ):
+        """
+        Initialize the model client.
+        
+        Args:
+            provider: LLM provider (overrides LLM_PROVIDER env var)
+            model: Model name (overrides LLM_MODEL env var)
+            api_key: API key (overrides LLM_API_KEY env var)
+            temperature: Generation temperature (overrides LLM_TEMPERATURE env var)
+            max_tokens: Max tokens to generate (overrides LLM_MAX_TOKENS env var)
+        """
+        self.provider = provider or os.getenv("LLM_PROVIDER", "openai")
+        self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+        self.api_key = api_key or os.getenv("LLM_API_KEY")
+        self.temperature = temperature or float(os.getenv("LLM_TEMPERATURE", "0.7"))
+        self.max_tokens = max_tokens or int(os.getenv("LLM_MAX_TOKENS", "1000"))
+        
+        if not self.api_key:
+            raise ValueError(
+                "LLM_API_KEY environment variable is required. "
+                "Please set it in your .env file or pass it as a parameter."
+            )
+        
+        # Set API key for LiteLLM
+        # LiteLLM automatically detects provider from model name or we can set it explicitly
+        if self.provider.lower() == "openai":
+            os.environ["OPENAI_API_KEY"] = self.api_key
+        elif self.provider.lower() == "google":
+            os.environ["GOOGLE_API_KEY"] = self.api_key
+        elif self.provider.lower() == "anthropic":
+            os.environ["ANTHROPIC_API_KEY"] = self.api_key
+        else:
+            # For other providers, set a generic key
+            # LiteLLM will use the model name to determine the provider
+            os.environ["LITELLM_API_KEY"] = self.api_key
+    
+    async def generate_chat(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs: Any
+    ) -> str:
+        """
+        Generate a chat completion.
+        
+        Args:
+            messages: List of message dicts with "role" and "content" keys.
+                     Example: [{"role": "user", "content": "Hello"}]
+            temperature: Override default temperature for this call
+            max_tokens: Override default max_tokens for this call
+            **kwargs: Additional parameters to pass to the LLM (e.g., top_p, stream)
+        
+        Returns:
+            The generated text response as a string.
+        
+        Raises:
+            Exception: If the LLM call fails
+        """
+        try:
+            response = completion(
+                model=self.model,
+                messages=messages,
+                temperature=temperature or self.temperature,
+                max_tokens=max_tokens or self.max_tokens,
+                **kwargs
+            )
+            
+            # Extract the content from the response
+            if hasattr(response, 'choices') and len(response.choices) > 0:
+                return response.choices[0].message.content
+            elif isinstance(response, dict) and "choices" in response:
+                return response["choices"][0]["message"]["content"]
+            else:
+                raise ValueError(f"Unexpected response format: {response}")
+                
+        except Exception as e:
+            raise Exception(f"LLM generation failed: {str(e)}") from e
+    
+    async def generate_chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs: Any
+    ):
+        """
+        Generate a streaming chat completion (generator).
+        
+        Args:
+            messages: List of message dicts with "role" and "content" keys
+            temperature: Override default temperature for this call
+            max_tokens: Override default max_tokens for this call
+            **kwargs: Additional parameters to pass to the LLM
+        
+        Yields:
+            Chunks of the generated text as they arrive.
+        """
+        try:
+            response = completion(
+                model=self.model,
+                messages=messages,
+                temperature=temperature or self.temperature,
+                max_tokens=max_tokens or self.max_tokens,
+                stream=True,
+                **kwargs
+            )
+            
+            for chunk in response:
+                if hasattr(chunk, 'choices') and len(chunk.choices) > 0:
+                    delta = chunk.choices[0].delta
+                    if hasattr(delta, 'content') and delta.content:
+                        yield delta.content
+                elif isinstance(chunk, dict) and "choices" in chunk:
+                    delta = chunk["choices"][0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        yield content
+                        
+        except Exception as e:
+            raise Exception(f"LLM streaming failed: {str(e)}") from e
+    
+    def get_model_info(self) -> Dict[str, Any]:
+        """
+        Get information about the current model configuration.
+        
+        Returns:
+            Dictionary with model configuration details.
+        """
+        return {
+            "provider": self.provider,
+            "model": self.model,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "api_key_set": bool(self.api_key),
+        }
+
+
+# Global instance (lazy initialization)
+_client_instance: Optional[ModelClient] = None
+
+
+def get_model_client() -> ModelClient:
+    """
+    Get or create the global model client instance.
+    
+    Returns:
+        The global ModelClient instance.
+    """
+    global _client_instance
+    if _client_instance is None:
+        _client_instance = ModelClient()
+    return _client_instance
+
+
+def reset_model_client():
+    """Reset the global model client instance (useful for testing)."""
+    global _client_instance
+    _client_instance = None
+
