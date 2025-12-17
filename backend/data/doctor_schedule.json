@@ -1,4 +1,607 @@
 {
-  "doctors": []
+  "doctors": [
+    {
+      "id": "doctor-001",
+      "name": "Dr. Rajesh Kumar",
+      "title": "MBBS, MD (Cardiology)",
+      "specialty": "Cardiology",
+      "qualification": "MD Cardiology, AIIMS New Delhi",
+      "experience_years": 15,
+      "consultation_fee": 1500,
+      "clinic_id": "clinic-001",
+      "clinic_name": "Apollo Clinic Connaught Place",
+      "contact": {
+        "phone": "+91-98765-43210",
+        "email": "dr.rajesh.kumar@apolloclinic.in"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "tuesday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "wednesday": [
+          {"start": "09:00", "end": "13:00"}
+        ],
+        "thursday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "friday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": ["2025-01-26", "2025-03-25"],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-002",
+      "name": "Dr. Priya Sharma",
+      "title": "MBBS, MS (Orthopedics)",
+      "specialty": "Orthopedics",
+      "qualification": "MS Orthopedics, Maulana Azad Medical College",
+      "experience_years": 12,
+      "consultation_fee": 1200,
+      "clinic_id": "clinic-001",
+      "clinic_name": "Apollo Clinic Connaught Place",
+      "contact": {
+        "phone": "+91-98765-43211",
+        "email": "dr.priya.sharma@apolloclinic.in"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "15:00", "end": "18:00"}
+        ],
+        "tuesday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "wednesday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "15:00", "end": "18:00"}
+        ],
+        "thursday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "friday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "15:00", "end": "18:00"}
+        ],
+        "saturday": [
+          {"start": "10:00", "end": "14:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-003",
+      "name": "Dr. Amit Verma",
+      "title": "MBBS, MD (Pediatrics)",
+      "specialty": "Pediatrics",
+      "qualification": "MD Pediatrics, Lady Hardinge Medical College",
+      "experience_years": 10,
+      "consultation_fee": 1000,
+      "clinic_id": "clinic-001",
+      "clinic_name": "Apollo Clinic Connaught Place",
+      "contact": {
+        "phone": "+91-98765-43212",
+        "email": "dr.amit.verma@apolloclinic.in"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "09:00", "end": "12:00"}
+        ],
+        "tuesday": [
+          {"start": "09:00", "end": "12:00"}
+        ],
+        "wednesday": [
+          {"start": "09:00", "end": "12:00"}
+        ],
+        "thursday": [
+          {"start": "09:00", "end": "12:00"}
+        ],
+        "friday": [
+          {"start": "09:00", "end": "12:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "12:00"}
+        ],
+        "sunday": [
+          {"start": "10:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 20
+    },
+    {
+      "id": "doctor-004",
+      "name": "Dr. Meera Patel",
+      "title": "MBBS, MD (Cardiology), DM",
+      "specialty": "Cardiology",
+      "qualification": "DM Cardiology, AIIMS New Delhi",
+      "experience_years": 20,
+      "consultation_fee": 2000,
+      "clinic_id": "clinic-002",
+      "clinic_name": "Max Healthcare Saket",
+      "contact": {
+        "phone": "+91-98765-43213",
+        "email": "dr.meera.patel@maxhealthcare.in"
+      },
+      "languages": ["English", "Hindi", "Gujarati"],
+      "availability": {
+        "monday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "tuesday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "wednesday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "thursday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "friday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": ["2025-02-10", "2025-02-11"],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-005",
+      "name": "Dr. Sanjay Gupta",
+      "title": "MBBS, MD (Neurology), DM",
+      "specialty": "Neurology",
+      "qualification": "DM Neurology, PGI Chandigarh",
+      "experience_years": 18,
+      "consultation_fee": 1800,
+      "clinic_id": "clinic-002",
+      "clinic_name": "Max Healthcare Saket",
+      "contact": {
+        "phone": "+91-98765-43214",
+        "email": "dr.sanjay.gupta@maxhealthcare.in"
+      },
+      "languages": ["English", "Hindi", "Punjabi"],
+      "availability": {
+        "monday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "20:00"}
+        ],
+        "wednesday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "20:00"}
+        ],
+        "friday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "20:00"}
+        ],
+        "saturday": [
+          {"start": "10:00", "end": "14:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-006",
+      "name": "Dr. Anjali Singh",
+      "title": "MBBS, MD (Gynecology)",
+      "specialty": "Gynecology",
+      "qualification": "MD Obstetrics & Gynecology, LHMC",
+      "experience_years": 14,
+      "consultation_fee": 1300,
+      "clinic_id": "clinic-002",
+      "clinic_name": "Max Healthcare Saket",
+      "contact": {
+        "phone": "+91-98765-43215",
+        "email": "dr.anjali.singh@maxhealthcare.in"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "tuesday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "thursday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "friday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "14:00"}
+        ],
+        "sunday": [
+          {"start": "10:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-007",
+      "name": "Dr. Vikram Malhotra",
+      "title": "MBBS, MS (Orthopedics)",
+      "specialty": "Orthopedics",
+      "qualification": "MS Orthopedics, Safdarjung Hospital",
+      "experience_years": 16,
+      "consultation_fee": 1400,
+      "clinic_id": "clinic-003",
+      "clinic_name": "Fortis Hospital Vasant Kunj",
+      "contact": {
+        "phone": "+91-98765-43216",
+        "email": "dr.vikram.malhotra@fortishealthcare.com"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "08:30", "end": "12:30"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "tuesday": [
+          {"start": "08:30", "end": "12:30"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "wednesday": [
+          {"start": "08:30", "end": "12:30"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "thursday": [
+          {"start": "08:30", "end": "12:30"}
+        ],
+        "friday": [
+          {"start": "08:30", "end": "12:30"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": ["2025-01-15"],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-008",
+      "name": "Dr. Kavita Reddy",
+      "title": "MBBS, MS (ENT)",
+      "specialty": "ENT",
+      "qualification": "MS ENT, MAMC Delhi",
+      "experience_years": 11,
+      "consultation_fee": 1100,
+      "clinic_id": "clinic-003",
+      "clinic_name": "Fortis Hospital Vasant Kunj",
+      "contact": {
+        "phone": "+91-98765-43217",
+        "email": "dr.kavita.reddy@fortishealthcare.com"
+      },
+      "languages": ["English", "Hindi", "Telugu"],
+      "availability": {
+        "monday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "tuesday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "wednesday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "thursday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "19:00"}
+        ],
+        "friday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "saturday": [
+          {"start": "10:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 20
+    },
+    {
+      "id": "doctor-009",
+      "name": "Dr. Arun Joshi",
+      "title": "MBBS, MD (Dermatology)",
+      "specialty": "Dermatology",
+      "qualification": "MD Dermatology, AIIMS New Delhi",
+      "experience_years": 9,
+      "consultation_fee": 1000,
+      "clinic_id": "clinic-003",
+      "clinic_name": "Fortis Hospital Vasant Kunj",
+      "contact": {
+        "phone": "+91-98765-43218",
+        "email": "dr.arun.joshi@fortishealthcare.com"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "tuesday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "wednesday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "thursday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "friday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "saturday": [
+          {"start": "11:00", "end": "14:00"}
+        ],
+        "sunday": [
+          {"start": "10:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 25
+    },
+    {
+      "id": "doctor-010",
+      "name": "Dr. Ramesh Choudhary",
+      "title": "MBBS, MD (Cardiology), DM",
+      "specialty": "Cardiology",
+      "qualification": "DM Cardiology, GB Pant Hospital",
+      "experience_years": 22,
+      "consultation_fee": 2200,
+      "clinic_id": "clinic-004",
+      "clinic_name": "BLK Super Speciality Hospital",
+      "contact": {
+        "phone": "+91-98765-43219",
+        "email": "dr.ramesh.choudhary@blkhospital.com"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "tuesday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "wednesday": [
+          {"start": "08:00", "end": "12:00"}
+        ],
+        "thursday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "friday": [
+          {"start": "08:00", "end": "12:00"},
+          {"start": "15:00", "end": "19:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": ["2025-03-10", "2025-03-11", "2025-03-12"],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-011",
+      "name": "Dr. Sunita Mehta",
+      "title": "MBBS, MD (Gastroenterology), DM",
+      "specialty": "Gastroenterology",
+      "qualification": "DM Gastroenterology, AIIMS New Delhi",
+      "experience_years": 13,
+      "consultation_fee": 1600,
+      "clinic_id": "clinic-004",
+      "clinic_name": "BLK Super Speciality Hospital",
+      "contact": {
+        "phone": "+91-98765-43220",
+        "email": "dr.sunita.mehta@blkhospital.com"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "19:00"}
+        ],
+        "wednesday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "19:00"}
+        ],
+        "thursday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "friday": [
+          {"start": "10:00", "end": "14:00"},
+          {"start": "16:00", "end": "19:00"}
+        ],
+        "saturday": [
+          {"start": "10:00", "end": "14:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-012",
+      "name": "Dr. Karan Bhardwaj",
+      "title": "MBBS, MD (General Medicine)",
+      "specialty": "General Medicine",
+      "qualification": "MD General Medicine, UCMS Delhi",
+      "experience_years": 8,
+      "consultation_fee": 800,
+      "clinic_id": "clinic-004",
+      "clinic_name": "BLK Super Speciality Hospital",
+      "contact": {
+        "phone": "+91-98765-43221",
+        "email": "dr.karan.bhardwaj@blkhospital.com"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "tuesday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "wednesday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "thursday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "friday": [
+          {"start": "09:00", "end": "13:00"},
+          {"start": "14:00", "end": "18:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "14:00"}
+        ],
+        "sunday": [
+          {"start": "10:00", "end": "14:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 20
+    },
+    {
+      "id": "doctor-013",
+      "name": "Dr. Nisha Kapoor",
+      "title": "MBBS, MD (Cardiology)",
+      "specialty": "Cardiology",
+      "qualification": "MD Cardiology, LHMC Delhi",
+      "experience_years": 10,
+      "consultation_fee": 1400,
+      "clinic_id": "clinic-005",
+      "clinic_name": "AIIMS Outpatient Department",
+      "contact": {
+        "phone": "+91-98765-43222",
+        "email": "dr.nisha.kapoor@aiims.edu"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "09:00", "end": "13:00"}
+        ],
+        "tuesday": [
+          {"start": "09:00", "end": "13:00"}
+        ],
+        "wednesday": [
+          {"start": "09:00", "end": "13:00"}
+        ],
+        "thursday": [
+          {"start": "09:00", "end": "13:00"}
+        ],
+        "friday": [
+          {"start": "09:00", "end": "13:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 30
+    },
+    {
+      "id": "doctor-014",
+      "name": "Dr. Manoj Tiwari",
+      "title": "MBBS, MD (Psychiatry)",
+      "specialty": "Psychiatry",
+      "qualification": "MD Psychiatry, NIMHANS Bangalore",
+      "experience_years": 17,
+      "consultation_fee": 1500,
+      "clinic_id": "clinic-005",
+      "clinic_name": "AIIMS Outpatient Department",
+      "contact": {
+        "phone": "+91-98765-43223",
+        "email": "dr.manoj.tiwari@aiims.edu"
+      },
+      "languages": ["English", "Hindi"],
+      "availability": {
+        "monday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "tuesday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "wednesday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "thursday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "friday": [
+          {"start": "10:00", "end": "14:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "12:00"}
+        ]
+      },
+      "blocked_dates": ["2025-02-15", "2025-02-16"],
+      "appointment_duration_minutes": 45
+    },
+    {
+      "id": "doctor-015",
+      "name": "Dr. Pooja Desai",
+      "title": "MBBS, MD (Pediatrics)",
+      "specialty": "Pediatrics",
+      "qualification": "MD Pediatrics, Maulana Azad Medical College",
+      "experience_years": 12,
+      "consultation_fee": 1000,
+      "clinic_id": "clinic-005",
+      "clinic_name": "AIIMS Outpatient Department",
+      "contact": {
+        "phone": "+91-98765-43224",
+        "email": "dr.pooja.desai@aiims.edu"
+      },
+      "languages": ["English", "Hindi", "Gujarati"],
+      "availability": {
+        "monday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "tuesday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "wednesday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "thursday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "friday": [
+          {"start": "11:00", "end": "15:00"}
+        ],
+        "saturday": [
+          {"start": "09:00", "end": "12:00"}
+        ]
+      },
+      "blocked_dates": [],
+      "appointment_duration_minutes": 20
+    }
+  ]
 }
-
