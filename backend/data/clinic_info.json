@@ -1,0 +1,196 @@
+{
+  "clinics": [
+    {
+      "id": "clinic-001",
+      "name": "Apollo Clinic Connaught Place",
+      "address": {
+        "street": "D-1, Connaught Place",
+        "area": "Connaught Place",
+        "city": "New Delhi",
+        "state": "Delhi",
+        "pincode": "110001",
+        "country": "India"
+      },
+      "contact": {
+        "phone": "+91-11-23456789",
+        "email": "connaughtplace@apolloclinic.in",
+        "emergency": "+91-11-23456790"
+      },
+      "specialties": [
+        "General Medicine",
+        "Cardiology",
+        "Orthopedics",
+        "Pediatrics",
+        "Dermatology"
+      ],
+      "operating_hours": {
+        "monday": {"open": "09:00", "close": "18:00"},
+        "tuesday": {"open": "09:00", "close": "18:00"},
+        "wednesday": {"open": "09:00", "close": "18:00"},
+        "thursday": {"open": "09:00", "close": "18:00"},
+        "friday": {"open": "09:00", "close": "18:00"},
+        "saturday": {"open": "09:00", "close": "15:00"},
+        "sunday": {"open": "10:00", "close": "14:00"}
+      },
+      "appointment_duration_minutes": 30,
+      "timezone": "Asia/Kolkata"
+    },
+    {
+      "id": "clinic-002",
+      "name": "Max Healthcare Saket",
+      "address": {
+        "street": "2, Press Enclave Road",
+        "area": "Saket",
+        "city": "New Delhi",
+        "state": "Delhi",
+        "pincode": "110017",
+        "country": "India"
+      },
+      "contact": {
+        "phone": "+91-11-26515000",
+        "email": "saket@maxhealthcare.in",
+        "emergency": "+91-11-26515001"
+      },
+      "specialties": [
+        "General Medicine",
+        "Cardiology",
+        "Neurology",
+        "Oncology",
+        "Gynecology",
+        "Urology"
+      ],
+      "operating_hours": {
+        "monday": {"open": "08:00", "close": "20:00"},
+        "tuesday": {"open": "08:00", "close": "20:00"},
+        "wednesday": {"open": "08:00", "close": "20:00"},
+        "thursday": {"open": "08:00", "close": "20:00"},
+        "friday": {"open": "08:00", "close": "20:00"},
+        "saturday": {"open": "09:00", "close": "17:00"},
+        "sunday": {"open": "10:00", "close": "16:00"}
+      },
+      "appointment_duration_minutes": 30,
+      "timezone": "Asia/Kolkata"
+    },
+    {
+      "id": "clinic-003",
+      "name": "Fortis Hospital Vasant Kunj",
+      "address": {
+        "street": "Sector B, Pocket 1",
+        "area": "Vasant Kunj",
+        "city": "New Delhi",
+        "state": "Delhi",
+        "pincode": "110070",
+        "country": "India"
+      },
+      "contact": {
+        "phone": "+91-11-42776222",
+        "email": "vasantkunj@fortishealthcare.com",
+        "emergency": "+91-11-42776223"
+      },
+      "specialties": [
+        "General Medicine",
+        "Cardiology",
+        "Orthopedics",
+        "Pediatrics",
+        "Dermatology",
+        "ENT",
+        "Ophthalmology"
+      ],
+      "operating_hours": {
+        "monday": {"open": "08:30", "close": "19:30"},
+        "tuesday": {"open": "08:30", "close": "19:30"},
+        "wednesday": {"open": "08:30", "close": "19:30"},
+        "thursday": {"open": "08:30", "close": "19:30"},
+        "friday": {"open": "08:30", "close": "19:30"},
+        "saturday": {"open": "09:00", "close": "16:00"},
+        "sunday": {"open": "10:00", "close": "15:00"}
+      },
+      "appointment_duration_minutes": 30,
+      "timezone": "Asia/Kolkata"
+    },
+    {
+      "id": "clinic-004",
+      "name": "BLK Super Speciality Hospital",
+      "address": {
+        "street": "Pusa Road",
+        "area": "Rajinder Nagar",
+        "city": "New Delhi",
+        "state": "Delhi",
+        "pincode": "110005",
+        "country": "India"
+      },
+      "contact": {
+        "phone": "+91-11-30403040",
+        "email": "info@blkhospital.com",
+        "emergency": "+91-11-30403041"
+      },
+      "specialties": [
+        "General Medicine",
+        "Cardiology",
+        "Neurology",
+        "Oncology",
+        "Orthopedics",
+        "Gastroenterology",
+        "Nephrology"
+      ],
+      "operating_hours": {
+        "monday": {"open": "08:00", "close": "20:00"},
+        "tuesday": {"open": "08:00", "close": "20:00"},
+        "wednesday": {"open": "08:00", "close": "20:00"},
+        "thursday": {"open": "08:00", "close": "20:00"},
+        "friday": {"open": "08:00", "close": "20:00"},
+        "saturday": {"open": "09:00", "close": "18:00"},
+        "sunday": {"open": "10:00", "close": "16:00"}
+      },
+      "appointment_duration_minutes": 30,
+      "timezone": "Asia/Kolkata"
+    },
+    {
+      "id": "clinic-005",
+      "name": "AIIMS Outpatient Department",
+      "address": {
+        "street": "Ansari Nagar",
+        "area": "AIIMS Campus",
+        "city": "New Delhi",
+        "state": "Delhi",
+        "pincode": "110029",
+        "country": "India"
+      },
+      "contact": {
+        "phone": "+91-11-26588500",
+        "email": "opd@aiims.edu",
+        "emergency": "+91-11-26588700"
+      },
+      "specialties": [
+        "General Medicine",
+        "Cardiology",
+        "Neurology",
+        "Oncology",
+        "Orthopedics",
+        "Pediatrics",
+        "Psychiatry",
+        "Dermatology"
+      ],
+      "operating_hours": {
+        "monday": {"open": "09:00", "close": "17:00"},
+        "tuesday": {"open": "09:00", "close": "17:00"},
+        "wednesday": {"open": "09:00", "close": "17:00"},
+        "thursday": {"open": "09:00", "close": "17:00"},
+        "friday": {"open": "09:00", "close": "17:00"},
+        "saturday": {"open": "09:00", "close": "13:00"},
+        "sunday": "closed"
+      },
+      "appointment_duration_minutes": 30,
+      "timezone": "Asia/Kolkata"
+    }
+  ],
+  "general_info": {
+    "timezone": "Asia/Kolkata",
+    "currency": "INR",
+    "language": "en",
+    "booking_advance_days": 30,
+    "cancellation_hours": 24,
+    "emergency_contact": "+91-112"
+  }
+}
+

@@ -2,3 +2,6 @@ fastapi
 uvicorn
 python-dotenv
 litellm
+google-generativeai
+pytest
+pytest-asyncio

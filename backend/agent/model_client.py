@@ -25,14 +25,17 @@ class ModelClient:
     
     Supports multiple providers through LiteLLM:
     - OpenAI: gpt-4, gpt-3.5-turbo, etc.
-    - Google: gemini/gemini-2.0-flash, gemini/gemini-pro, etc.
+    - Google AI Studio (Gemini API): gemini-2.0-flash, gemini-pro, etc.
+      (Uses Google AI Studio API, NOT Vertex AI - only requires API key)
     - Anthropic: claude-3-5-sonnet, claude-3-opus, etc.
     - And many more...
     
     Environment variables:
         LLM_PROVIDER: Provider name (e.g., "openai", "google", "anthropic")
-        LLM_MODEL: Model identifier (e.g., "gpt-4o-mini", "gemini/gemini-2.0-flash")
+        LLM_MODEL: Model identifier (e.g., "gpt-4o-mini", "gemini-2.0-flash" or "gemini/gemini-2.0-flash")
+                     For Google models, the "gemini/" prefix is automatically added if missing
         LLM_API_KEY: API key for the provider
+        LLM_API_VERSION: API version for Google models (default: "v1", can be "v1beta")
         LLM_TEMPERATURE: Temperature for generation (default: 0.7)
         LLM_MAX_TOKENS: Maximum tokens to generate (default: 1000)
     """
@@ -56,10 +59,13 @@ class ModelClient:
             max_tokens: Max tokens to generate (overrides LLM_MAX_TOKENS env var)
         """
         self.provider = provider or os.getenv("LLM_PROVIDER", "openai")
-        self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+        raw_model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.api_key = api_key or os.getenv("LLM_API_KEY")
         self.temperature = temperature or float(os.getenv("LLM_TEMPERATURE", "0.7"))
         self.max_tokens = max_tokens or int(os.getenv("LLM_MAX_TOKENS", "1000"))
+        
+        # API version configuration (default to v1 for stability)
+        self.api_version = os.getenv("LLM_API_VERSION", "v1")
         
         if not self.api_key:
             raise ValueError(
@@ -67,16 +73,43 @@ class ModelClient:
                 "Please set it in your .env file or pass it as a parameter."
             )
         
-        # Set API key for LiteLLM
-        # LiteLLM automatically detects provider from model name or we can set it explicitly
-        if self.provider.lower() == "openai":
-            os.environ["OPENAI_API_KEY"] = self.api_key
-        elif self.provider.lower() == "google":
+        # Normalize model name for Google models (Gemini or Gemma via Google AI Studio API, NOT Vertex AI)
+        # LiteLLM requires "gemini/" prefix for Gemini models to use Google AI Studio API
+        # Gemma models should be used as-is (no prefix needed)
+        # Without proper prefix, LiteLLM tries to use Vertex AI which requires google-auth
+        # We explicitly use Google AI Studio API by:
+        # 1. Adding "gemini/" prefix only for Gemini models (not Gemma)
+        # 2. Setting GOOGLE_API_KEY (not Vertex AI credentials)
+        # 3. Setting GEMINI_API_BASE to control API version (v1 or v1beta)
+        if self.provider.lower() in ["google", "gemini"]:
+            # Check if it's a Gemma model (starts with "gemma")
+            if raw_model.lower().startswith("gemma"):
+                # Gemma models: use as-is without prefix
+                self.model = raw_model
+            # Check if it's a Gemini model or needs gemini/ prefix
+            elif not raw_model.startswith("gemini/"):
+                # Auto-add gemini/ prefix to ensure Google AI Studio API usage
+                self.model = f"gemini/{raw_model}"
+            else:
+                # Already has gemini/ prefix, use as-is
+                self.model = raw_model
+            
+            # Set GOOGLE_API_KEY for Google AI Studio (not Vertex AI)
             os.environ["GOOGLE_API_KEY"] = self.api_key
+            # Set API base URL to control version (v1 is stable, v1beta is beta)
+            # This is how LiteLLM determines which API version to use
+            os.environ["GEMINI_API_BASE"] = f"https://generativelanguage.googleapis.com/{self.api_version}"
+            # Explicitly disable Vertex AI to ensure we use Google AI Studio
+            os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)  # Remove if present
+        elif self.provider.lower() == "openai":
+            self.model = raw_model
+            os.environ["OPENAI_API_KEY"] = self.api_key
         elif self.provider.lower() == "anthropic":
+            self.model = raw_model
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
         else:
-            # For other providers, set a generic key
+            # For other providers, use model as-is
+            self.model = raw_model
             # LiteLLM will use the model name to determine the provider
             os.environ["LITELLM_API_KEY"] = self.api_key
     
@@ -104,6 +137,8 @@ class ModelClient:
             Exception: If the LLM call fails
         """
         try:
+            # For Google models, API version is set via GEMINI_API_BASE env var in __init__
+            # No need to pass it in extra_params as it's already configured
             response = completion(
                 model=self.model,
                 messages=messages,
@@ -143,6 +178,8 @@ class ModelClient:
             Chunks of the generated text as they arrive.
         """
         try:
+            # For Google models, API version is set via GEMINI_API_BASE env var in __init__
+            # No need to pass it in extra_params as it's already configured
             response = completion(
                 model=self.model,
                 messages=messages,
@@ -176,6 +213,7 @@ class ModelClient:
         return {
             "provider": self.provider,
             "model": self.model,
+            "api_version": self.api_version if self.provider.lower() in ["google", "gemini"] else None,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "api_key_set": bool(self.api_key),
