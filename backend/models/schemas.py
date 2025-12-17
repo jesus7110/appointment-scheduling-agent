@@ -186,6 +186,27 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class BotAction(BaseModel):
+    """An action option for selection messages."""
+    key: str
+    value: Optional[str] = None
+
+
+class BotMessageData(BaseModel):
+    """Payload for bot message types."""
+    msg_body: str
+    action: Optional[List[BotAction]] = None
+
+
+class BotMessage(BaseModel):
+    """Structured bot message used by the frontend."""
+    msg_type: str = Field(..., pattern=r"^(text|action1)$")
+    data: BotMessageData
+    # Optional UI flags (frontend controlled)
+    actionsDisabled: Optional[bool] = None
+    selectedAction: Optional[str] = None
+
+
 class ChatRequest(BaseModel):
     """Request body for the chat endpoint."""
     messages: List[ChatMessage] = Field(..., min_length=1)
@@ -206,7 +227,8 @@ class AppointmentSummary(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response from the chat endpoint."""
-    message: str
+    message: str  # Plain text reply (backward compatible)
+    bot_message: Optional[BotMessage] = None  # Structured reply for UI
     appointment_summary: Optional[AppointmentSummary] = None
     suggested_actions: Optional[List[str]] = None
     session_id: Optional[str] = None

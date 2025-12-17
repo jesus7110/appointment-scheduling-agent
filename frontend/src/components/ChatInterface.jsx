@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ChatInterface.css';
 import LoadingAnimation from './LoadingAnimation';
-import { getBotResponse, resetMockAPI } from '../mockAPI';
+
+// Backend API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([
@@ -49,7 +51,6 @@ const ChatInterface = () => {
   }, [showMenu]);
 
   const handleRestart = () => {
-    resetMockAPI();
     setMessages([
       {
         id: 1,
@@ -78,6 +79,43 @@ const ChatInterface = () => {
     // You can add additional connect functionality
   };
 
+  const callBackend = async (conversation) => {
+    // Map frontend messages to backend schema
+    const mappedMessages = conversation.map(msg => {
+      if (msg.sender === 'user') {
+        return { role: 'user', content: msg.text || '' };
+      }
+      // For bot messages, treat as assistant content for history context
+      if (msg.sender === 'bot') {
+        if (msg.msg_type === 'text') {
+          return { role: 'assistant', content: msg.data?.msg_body || '' };
+        }
+        if (msg.msg_type === 'action1') {
+          // Include action options as part of assistant content so model can see what was shown
+          const actionsText = (msg.data?.action || [])
+            .map(a => `${a.key}${a.value ? ` (${a.value})` : ''}`)
+            .join(', ');
+          return { role: 'assistant', content: `${msg.data?.msg_body || ''}\nOptions: ${actionsText}` };
+        }
+      }
+      return { role: 'assistant', content: msg.text || msg.data?.msg_body || '' };
+    });
+
+    const payload = { messages: mappedMessages };
+
+    const res = await fetch(`${API_BASE_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`API error ${res.status}: ${errorText}`);
+    }
+    return res.json();
+  };
+
   const handleSend = async () => {
     if (inputValue.trim() && !isLoading) {
       const userMessage = {
@@ -93,11 +131,20 @@ const ChatInterface = () => {
       setIsLoading(true);
 
       try {
-        // Get structured response from mock API
-        const response = await getBotResponse(userInput);
+        // Call backend chat API with conversation history
+        const response = await callBackend([...messages, userMessage]);
+
+        // Backend returns ChatResponse with bot_message or plain message
+        const botPayload = response.bot_message
+          ? response.bot_message
+          : {
+              msg_type: 'text',
+              data: { msg_body: response.message || 'Sorry, I have no response.' }
+            };
+
         const botMessage = {
           id: messages.length + 2,
-          ...response,
+          ...botPayload,
           sender: 'bot',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -120,7 +167,7 @@ const ChatInterface = () => {
     }
   };
 
-  const handleActionClick = (messageId, actionKey, actionValue) => {
+  const handleActionClick = async (messageId, actionKey, actionValue) => {
     // Disable all buttons for this specific message
     setMessages(prev => prev.map(msg => 
       msg.id === messageId && msg.msg_type === 'action1'
@@ -141,33 +188,40 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Get next bot response
-    getBotResponse(actionKey)
-      .then((response) => {
-        const botMessage = {
-          id: messages.length + 2,
-          ...response,
-          sender: 'bot',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botMessage]);
-      })
-      .catch((error) => {
-        console.error('Error getting bot response:', error);
-        const errorMessage = {
-          id: messages.length + 2,
-          msg_type: "text",
-          data: {
-            msg_body: "Sorry, I encountered an error. Please try again."
-          },
-          sender: 'bot',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    try {
+      // Call backend chat API with conversation history
+      const response = await callBackend([...messages, userMessage]);
+
+      // Backend returns ChatResponse with bot_message or plain message
+      const botPayload = response.bot_message
+        ? response.bot_message
+        : {
+            msg_type: 'text',
+            data: { msg_body: response.message || 'Sorry, I have no response.' }
+          };
+
+      const botMessage = {
+        id: messages.length + 2,
+        ...botPayload,
+        sender: 'bot',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error getting bot response:', error);
+      const errorMessage = {
+        id: messages.length + 2,
+        msg_type: "text",
+        data: {
+          msg_body: "Sorry, I encountered an error. Please try again."
+        },
+        sender: 'bot',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e) => {

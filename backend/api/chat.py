@@ -6,13 +6,16 @@ Handles user messages and generates responses using the LLM.
 from fastapi import APIRouter, HTTPException
 from typing import List
 import logging
+from datetime import date
 
-from models.schemas import ChatRequest, ChatResponse, ChatMessage
+from models.schemas import ChatRequest, ChatResponse, ChatMessage, BotMessage, BotMessageData
 from agent.model_client import get_model_client
 from utils.data_loader import (
     get_summary_stats,
     get_all_specialties,
     load_general_info,
+    get_doctors_by_specialty,
+    load_doctors,
 )
 
 # Set up logging
@@ -78,6 +81,79 @@ def build_system_prompt() -> str:
 Help patients find doctors and book appointments. Be friendly and professional."""
 
 
+def build_action_bot_message(
+    request: ChatRequest,
+    assistant_text: str
+) -> BotMessage:
+    """
+    Optionally build an action-style bot message (buttons) based on user intent.
+
+    Heuristics:
+    - If user asks to book/schedule/choose time/slot -> return time-slot buttons.
+    - If user mentions doctor/specialist or a specialty -> return doctor selection buttons.
+    """
+    try:
+        last_user_msg = (request.messages[-1].content or "").lower()
+
+        # Detect time/slot intent
+        time_keywords = ["slot", "time", "schedule", "book", "appointment", "available", "availability"]
+        wants_time = any(k in last_user_msg for k in time_keywords)
+
+        # Detect specialty intent
+        specialty = None
+        for spec in get_all_specialties():
+            if spec.lower() in last_user_msg:
+                specialty = spec
+                break
+
+        doctor_keywords = ["doctor", "dr", "specialist", "consult", "physician"]
+        wants_doctor = specialty is not None or any(k in last_user_msg for k in doctor_keywords)
+
+        # Build time slot actions
+        if wants_time:
+            today = date.today()
+            times = ["09:00", "11:00", "14:00", "16:00"]
+            actions = [
+                {
+                    "key": f"{t} today",
+                    "value": f"{today.isoformat()}T{t}:00"
+                } for t in times
+            ]
+            msg_body = assistant_text or "Please choose a time slot:"
+            return BotMessage(
+                msg_type="action1",
+                data=BotMessageData(
+                    msg_body=msg_body,
+                    action=actions
+                )
+            )
+
+        # Build doctor selection actions
+        if wants_doctor:
+            doctors = get_doctors_by_specialty(specialty) if specialty else load_doctors()
+            actions = [
+                {
+                    "key": f"{doc.name} ({doc.clinic_name})",
+                    "value": doc.id
+                }
+                for doc in doctors[:4]
+            ]
+            if actions:
+                msg_body = assistant_text or "Please select a doctor:"
+                return BotMessage(
+                    msg_type="action1",
+                    data=BotMessageData(
+                        msg_body=msg_body,
+                        action=actions
+                    )
+                )
+
+        return None
+    except Exception as e:
+        logger.warning(f"Failed to build action bot message: {e}")
+        return None
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     """
@@ -125,17 +201,26 @@ async def chat(request: ChatRequest) -> ChatResponse:
         logger.info(f"Processing chat request with {len(request.messages)} messages")
         
         # Generate response from LLM
-        assistant_message = await model_client.generate_chat(
+        assistant_text = await model_client.generate_chat(
             messages=llm_messages,
             temperature=0.7,
             max_tokens=1000
         )
         
-        logger.info(f"Generated response: {len(assistant_message)} characters")
+        logger.info(f"Generated response: {len(assistant_text)} characters")
+
+        # Build structured bot message for the frontend (with optional actions)
+        bot_message = build_action_bot_message(request, assistant_text)
+        if not bot_message:
+            bot_message = BotMessage(
+                msg_type="text",
+                data=BotMessageData(msg_body=assistant_text)
+            )
         
         # Build response
         response = ChatResponse(
-            message=assistant_message,
+            message=assistant_text,
+            bot_message=bot_message,
             session_id=request.session_id,
             suggested_actions=None,
             appointment_summary=None
