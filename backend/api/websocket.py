@@ -7,6 +7,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from typing import Optional
 import logging
 import json
+import asyncio
 
 from models.schemas import BotMessage, BotMessageData, BotAction
 from agent.model_client import get_model_client
@@ -190,33 +191,54 @@ async def websocket_endpoint(
             }
             await websocket.send_json(welcome_message)
         
-        # Message loop
+        # Message loop with inactivity timeout
+        INACTIVITY_TIMEOUT = 60  # 1 minute in seconds
+        
         while True:
-            # Receive message from client
-            data = await websocket.receive_json()
-            
-            message_type = data.get("type")
-            
-            if message_type == "message":
-                # User sent a message
-                user_message = data.get("content", "")
+            try:
+                # Receive message from client with timeout
+                data = await asyncio.wait_for(
+                    websocket.receive_json(),
+                    timeout=INACTIVITY_TIMEOUT
+                )
                 
-                if user_message.strip():
-                    # Send typing indicator
-                    await websocket.send_json({"type": "typing", "is_typing": True})
+                message_type = data.get("type")
+                
+                if message_type == "message":
+                    # User sent a message
+                    user_message = data.get("content", "")
                     
-                    # Process message and generate response
-                    response = await process_message(session_id, user_message)
+                    if user_message.strip():
+                        # Send typing indicator
+                        await websocket.send_json({"type": "typing", "is_typing": True})
+                        
+                        # Process message and generate response
+                        response = await process_message(session_id, user_message)
+                        
+                        # Send response
+                        await websocket.send_json(response)
+                
+                elif message_type == "ping":
+                    # Keep-alive ping
+                    await websocket.send_json({"type": "pong"})
+                
+                else:
+                    logger.warning(f"Unknown message type: {message_type}")
                     
-                    # Send response
-                    await websocket.send_json(response)
-            
-            elif message_type == "ping":
-                # Keep-alive ping
-                await websocket.send_json({"type": "pong"})
-            
-            else:
-                logger.warning(f"Unknown message type: {message_type}")
+            except asyncio.TimeoutError:
+                # Inactivity timeout reached - disconnect user
+                logger.info(f"Inactivity timeout for session {session_id}")
+                try:
+                    await websocket.send_json({
+                        "type": "inactivity_timeout",
+                        "message": "You've been disconnected due to inactivity."
+                    })
+                    # Give a brief moment for message to be sent, then close
+                    await asyncio.sleep(0.1)
+                    await websocket.close(code=1000, reason="Inactivity timeout")
+                except:
+                    pass
+                break  # Exit the loop and close connection
     
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: session={session_id}")
