@@ -134,7 +134,7 @@
 .header-info h2 {
   color: #ffffff;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -311,6 +311,10 @@
   color: #ffffff;
 }
 
+.message-user .message-text {
+  font-weight: 400;
+}
+
 .message-bot .message-bubble {
   background: #1a1a1a;
   border-bottom-left-radius: 4px;
@@ -320,10 +324,12 @@
 
 .message-text {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   word-wrap: break-word;
   color: inherit;
+  font-weight: 200;
+  letter-spacing: 0.3px;
 }
 
 .message-time {

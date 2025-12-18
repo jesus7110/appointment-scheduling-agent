@@ -2,28 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import './ChatInterface.css';
 import LoadingAnimation from './LoadingAnimation';
 
-// Backend API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Backend WebSocket URL
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000';
 
 const ChatInterface = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      msg_type: "text",
-      data: {
-        msg_body: "Hello! I'm here to help you schedule an appointment. How can I assist you today?"
-      },
-      sender: 'bot',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [clientId, setClientId] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const menuRef = useRef(null);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,124 +45,201 @@ const ChatInterface = () => {
     };
   }, [showMenu]);
 
-  const handleRestart = () => {
-    setMessages([
-      {
-        id: 1,
-        msg_type: "text",
-        data: {
-          msg_body: "Hello! I'm here to help you schedule an appointment. How can I assist you today?"
-        },
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]);
-    setInputValue('');
-    setIsLoading(false);
-    setShowMenu(false);
-  };
-
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setShowMenu(false);
-    // You can add additional disconnect functionality
-  };
-
-  const handleConnect = () => {
-    setIsConnected(true);
-    setShowMenu(false);
-    // You can add additional connect functionality
-  };
-
-  const callBackend = async (conversation) => {
-    // Map frontend messages to backend schema
-    const mappedMessages = conversation.map(msg => {
-      if (msg.sender === 'user') {
-        return { role: 'user', content: msg.text || '' };
-      }
-      // For bot messages, treat as assistant content for history context
-      if (msg.sender === 'bot') {
-        if (msg.msg_type === 'text') {
-          return { role: 'assistant', content: msg.data?.msg_body || '' };
-        }
-        if (msg.msg_type === 'action1') {
-          // Include action options as part of assistant content so model can see what was shown
-          const actionsText = (msg.data?.action || [])
-            .map(a => `${a.key}${a.value ? ` (${a.value})` : ''}`)
-            .join(', ');
-          return { role: 'assistant', content: `${msg.data?.msg_body || ''}\nOptions: ${actionsText}` };
-        }
-      }
-      return { role: 'assistant', content: msg.text || msg.data?.msg_body || '' };
-    });
-
-    const payload = { messages: mappedMessages };
-
-    const res = await fetch(`${API_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`API error ${res.status}: ${errorText}`);
+  // Load clientId from localStorage on mount (but don't auto-connect)
+  useEffect(() => {
+    const storedClientId = localStorage.getItem('clientId');
+    if (storedClientId) {
+      setClientId(storedClientId);
     }
-    return res.json();
+    
+    // Cleanup on unmount
+    return () => {
+      disconnectWebSocket();
+    };
+  }, []);
+
+  const connectWebSocket = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('WebSocket already connected');
+      return;
+    }
+
+    try {
+      // Build WebSocket URL with clientId (from localStorage or state)
+      const storedClientId = localStorage.getItem('clientId') || clientId;
+      const wsUrl = storedClientId 
+        ? `${WS_BASE_URL}/ws?client_id=${storedClientId}`
+        : `${WS_BASE_URL}/ws`;
+      
+      console.log('Connecting to WebSocket:', wsUrl);
+      
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        setIsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+        
+        handleWebSocketMessage(data);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsConnected(false);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket closed');
+        setIsConnected(false);
+        wsRef.current = null;
+        // No auto-reconnect - user must manually reconnect
+      };
+    } catch (error) {
+      console.error('Failed to connect WebSocket:', error);
+      setIsConnected(false);
+    }
   };
 
-  const handleSend = async () => {
-    if (inputValue.trim() && !isLoading) {
+  const disconnectWebSocket = () => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setIsConnected(false);
+  };
+
+  const handleWebSocketMessage = (data) => {
+    const { type } = data;
+
+    switch (type) {
+      case 'client_registered':
+        // Server assigned us a clientId
+        const newClientId = data.client_id;
+        setClientId(newClientId);
+        localStorage.setItem('clientId', newClientId);
+        console.log('Client registered:', newClientId);
+        break;
+
+      case 'session_created':
+      case 'session_resumed':
+        // Session created or resumed
+        setSessionId(data.session_id);
+        console.log('Session:', data.session_id);
+        break;
+
+      case 'message':
+        // Received message from bot
+        setIsLoading(false);
+        
+        const botPayload = data.bot_message || {
+          msg_type: 'text',
+          data: { msg_body: 'No response' }
+        };
+
+        const botMessage = {
+          id: messages.length + Date.now(),
+          ...botPayload,
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        setMessages(prev => [...prev, botMessage]);
+        break;
+
+      case 'typing':
+        setIsLoading(data.is_typing);
+        break;
+
+      case 'error':
+        setIsLoading(false);
+        console.error('Server error:', data.message);
+        
+        const errorMessage = {
+          id: messages.length + Date.now(),
+          msg_type: 'text',
+          data: { msg_body: `Error: ${data.message}` },
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        break;
+
+      case 'inactivity_timeout':
+        // User was disconnected due to inactivity
+        setIsLoading(false);
+        console.log('Disconnected due to inactivity');
+        
+        const inactivityMessage = {
+          id: messages.length + Date.now(),
+          msg_type: 'text',
+          data: { msg_body: '⚠️ You have been disconnected due to inactivity. Click the menu to reconnect.' },
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, inactivityMessage]);
+        
+        // Immediately update connection status (don't wait for onclose)
+        setIsConnected(false);
+        
+        // Close the WebSocket from client side as well
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+        break;
+
+      case 'pong':
+        // Keep-alive response
+        break;
+
+      default:
+        console.warn('Unknown message type:', type);
+    }
+  };
+
+  const sendMessage = (content) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket not connected');
+      return;
+    }
+
+    try {
+      wsRef.current.send(JSON.stringify({
+        type: 'message',
+        content: content
+      }));
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  const handleSend = () => {
+    if (inputValue.trim() && !isLoading && isConnected) {
       const userMessage = {
-        id: messages.length + 1,
+        id: messages.length + Date.now(),
         text: inputValue,
         sender: 'user',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
-      setMessages([...messages, userMessage]);
-      const userInput = inputValue;
+      setMessages(prev => [...prev, userMessage]);
+      sendMessage(inputValue);
       setInputValue('');
       setIsLoading(true);
-
-      try {
-        // Call backend chat API with conversation history
-        const response = await callBackend([...messages, userMessage]);
-
-        // Backend returns ChatResponse with bot_message or plain message
-        const botPayload = response.bot_message
-          ? response.bot_message
-          : {
-              msg_type: 'text',
-              data: { msg_body: response.message || 'Sorry, I have no response.' }
-            };
-
-        const botMessage = {
-          id: messages.length + 2,
-          ...botPayload,
-          sender: 'bot',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botMessage]);
-      } catch (error) {
-        console.error('Error getting bot response:', error);
-        const errorMessage = {
-          id: messages.length + 2,
-          msg_type: "text",
-          data: {
-            msg_body: "Sorry, I encountered an error. Please try again."
-          },
-          sender: 'bot',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
-      }
     }
   };
 
-  const handleActionClick = async (messageId, actionKey, actionValue) => {
+  const handleActionClick = (messageId, actionKey, actionValue) => {
     // Disable all buttons for this specific message
     setMessages(prev => prev.map(msg => 
       msg.id === messageId && msg.msg_type === 'action1'
@@ -175,9 +247,9 @@ const ChatInterface = () => {
         : msg
     ));
 
-    // When user clicks an action button, send it as a user message
+    // Send action selection as user message
     const userMessage = {
-      id: messages.length + 1,
+      id: messages.length + Date.now(),
       text: actionKey,
       sender: 'user',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -186,42 +258,35 @@ const ChatInterface = () => {
     };
     
     setMessages(prev => [...prev, userMessage]);
+    sendMessage(actionKey);
     setIsLoading(true);
+  };
 
-    try {
-      // Call backend chat API with conversation history
-      const response = await callBackend([...messages, userMessage]);
-
-      // Backend returns ChatResponse with bot_message or plain message
-      const botPayload = response.bot_message
-        ? response.bot_message
-        : {
-            msg_type: 'text',
-            data: { msg_body: response.message || 'Sorry, I have no response.' }
-          };
-
-      const botMessage = {
-        id: messages.length + 2,
-        ...botPayload,
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error getting bot response:', error);
-      const errorMessage = {
-        id: messages.length + 2,
-        msg_type: "text",
-        data: {
-          msg_body: "Sorry, I encountered an error. Please try again."
-        },
-        sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+  const handleRestart = () => {
+    // Disconnect current WebSocket if connected
+    if (isConnected) {
+      disconnectWebSocket();
     }
+    
+    // Clear messages and state
+    setMessages([]);
+    setSessionId(null);
+    setInputValue('');
+    setIsLoading(false);
+    setShowMenu(false);
+    
+    // Connect/Reconnect (will create new session)
+    setTimeout(() => connectWebSocket(), 300);
+  };
+
+  const handleDisconnect = () => {
+    disconnectWebSocket();
+    setShowMenu(false);
+  };
+
+  const handleConnect = () => {
+    connectWebSocket();
+    setShowMenu(false);
   };
 
   const handleKeyPress = (e) => {
@@ -285,15 +350,11 @@ const ChatInterface = () => {
             {showMenu && (
               <div className="dropdown-menu">
                 <button className="dropdown-item" onClick={handleRestart}>
-                  Restart
+                  {isConnected ? 'Restart' : 'Connect'}
                 </button>
-                {isConnected ? (
+                {isConnected && (
                   <button className="dropdown-item dropdown-item-disconnect" onClick={handleDisconnect}>
                     Disconnect
-                  </button>
-                ) : (
-                  <button className="dropdown-item dropdown-item-connect" onClick={handleConnect}>
-                    Connect
                   </button>
                 )}
               </div>
@@ -368,13 +429,13 @@ const ChatInterface = () => {
             <input
               type="text"
               className="message-input"
-              placeholder={isLoading ? "Waiting for response..." : "Type your message..."}
+              placeholder={isLoading ? "Waiting for response..." : isConnected ? "Type your message..." : "Click menu to connect..."}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={isLoading}
+              disabled={isLoading || !isConnected}
             />
-            <button className="send-button" onClick={handleSend} disabled={isLoading}>
+            <button className="send-button" onClick={handleSend} disabled={isLoading || !isConnected}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
