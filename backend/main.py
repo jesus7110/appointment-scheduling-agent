@@ -9,6 +9,7 @@ load_dotenv()
 
 # Import routers
 from api.chat import router as chat_router
+from api.websocket import router as websocket_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -33,6 +34,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat_router)
+app.include_router(websocket_router)
 
 
 @app.get("/")

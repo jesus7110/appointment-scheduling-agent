@@ -1,9 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
 litellm
 google-generativeai
 pydantic[email]
 requests
+websockets
 pytest
 pytest-asyncio

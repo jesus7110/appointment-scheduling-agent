@@ -4,7 +4,11 @@ Quick test script to verify Groq API configuration.
 Run this to ensure your Groq setup is working correctly.
 
 Usage:
-    python test_groq.py
+    From project root: python backend/tests/test_groq.py
+    From backend/: python tests/test_groq.py
+    From backend/tests/: python test_groq.py
+
+Note: Make sure .env file is in the backend/ directory
 """
 
 import os
@@ -13,7 +17,9 @@ import asyncio
 from dotenv import load_dotenv
 
 # Add parent directory to path to import from agent module
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# This script is in backend/tests/, so we need to go up one level to backend/
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, backend_dir)
 
 from agent.model_client import ModelClient
 
@@ -26,8 +32,11 @@ async def test_groq_connection():
     print("=" * 60)
     print()
     
-    # Load environment variables
-    load_dotenv()
+    # Load environment variables from backend directory
+    # .env is in backend/ (one level up from tests/)
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(backend_dir, '.env')
+    load_dotenv(dotenv_path=env_path)
     
     # Check if required env vars are set
     provider = os.getenv("LLM_PROVIDER", "Not set")
