@@ -176,17 +176,19 @@ async def websocket_endpoint(
         
         logger.info(f"WebSocket connected: client={client_id}, session={session_id}")
         
-        # Send welcome message
-        welcome_message = {
-            "type": "message",
-            "bot_message": {
-                "msg_type": "text",
-                "data": {
-                    "msg_body": "Hello! I'm here to help you schedule an appointment. How can I assist you today?"
+        # Send welcome message only for new sessions (no existing messages)
+        session = session_manager.get_session(session_id)
+        if session and len(session["messages"]) == 0:
+            welcome_message = {
+                "type": "message",
+                "bot_message": {
+                    "msg_type": "text",
+                    "data": {
+                        "msg_body": "Hello! I'm here to help you schedule an appointment. How can I assist you today?"
+                    }
                 }
             }
-        }
-        await websocket.send_json(welcome_message)
+            await websocket.send_json(welcome_message)
         
         # Message loop
         while True:
