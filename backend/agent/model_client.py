@@ -28,12 +28,14 @@ class ModelClient:
     - Google AI Studio (Gemini API): gemini-2.0-flash, gemini-pro, etc.
       (Uses Google AI Studio API, NOT Vertex AI - only requires API key)
     - Anthropic: claude-3-5-sonnet, claude-3-opus, etc.
+    - Groq: llama-3.3-70b-versatile, mixtral-8x7b-32768, etc.
     - And many more...
     
     Environment variables:
-        LLM_PROVIDER: Provider name (e.g., "openai", "google", "anthropic")
-        LLM_MODEL: Model identifier (e.g., "gpt-4o-mini", "gemini-2.0-flash" or "gemini/gemini-2.0-flash")
+        LLM_PROVIDER: Provider name (e.g., "openai", "google", "anthropic", "groq")
+        LLM_MODEL: Model identifier (e.g., "gpt-4o-mini", "gemini-2.0-flash", "llama-3.3-70b-versatile")
                      For Google models, the "gemini/" prefix is automatically added if missing
+                     For Groq models, use "groq/" prefix (e.g., "groq/llama-3.3-70b-versatile")
         LLM_API_KEY: API key for the provider
         LLM_API_VERSION: API version for Google models (default: "v1", can be "v1beta")
         LLM_TEMPERATURE: Temperature for generation (default: 0.7)
@@ -107,6 +109,13 @@ class ModelClient:
         elif self.provider.lower() == "anthropic":
             self.model = raw_model
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
+        elif self.provider.lower() == "groq":
+            # Groq models: add groq/ prefix if not present
+            if not raw_model.startswith("groq/"):
+                self.model = f"groq/{raw_model}"
+            else:
+                self.model = raw_model
+            os.environ["GROQ_API_KEY"] = self.api_key
         else:
             # For other providers, use model as-is
             self.model = raw_model

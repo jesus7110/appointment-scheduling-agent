@@ -71,6 +71,10 @@ def build_system_prompt() -> str:
 - Always mention this is for New Delhi, India
 - Consultation fees are in Indian Rupees (₹)
 - Working hours follow Indian Standard Time (IST)
+
+**Strict Message Rules:**
+- Keep the responses very concise and to the point.
+- Do not use ** ** for text. Just provide plain text.
 """
         return system_prompt
         
