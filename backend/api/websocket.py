@@ -72,17 +72,21 @@ def build_system_prompt() -> str:
 
 async def process_message(session_id: str, user_message: str) -> dict:
     """
-    Process a user message and generate a response.
+    Process a user message and generate a response with tool calling support.
     
     Args:
         session_id: The session ID
         user_message: The user's message
         
     Returns:
-        Response dict with bot_message
+        Response dict with bot_message and optional close_connection flag
     """
+    from tools.tool_definitions import get_test_tools
+    from tools.tool_executor import get_tool_executor
+    
     session_manager = get_session_manager()
     model_client = get_model_client()
+    tool_executor = get_tool_executor()
     
     # Add user message to history
     session_manager.add_message(session_id, "user", user_message)
@@ -92,6 +96,14 @@ async def process_message(session_id: str, user_message: str) -> dict:
     
     # Build system prompt
     system_prompt = build_system_prompt()
+    
+    # Update system prompt to mention tools
+    system_prompt += """
+
+**IMPORTANT - Available Tools:**
+You have access to tools that can perform actions. When appropriate, use these tools:
+- end_conversation: When user wants to hang up, end chat, say goodbye, or disconnect
+"""
     
     # Prepare messages for LLM (prepend system prompt to first message)
     llm_messages = []
@@ -104,17 +116,69 @@ async def process_message(session_id: str, user_message: str) -> dict:
     
     logger.info(f"Processing message for session {session_id} ({len(history)} messages in history)")
     
-    # Generate response from LLM
-    assistant_text = await model_client.generate_chat(
+    # Get available tools
+    tools = get_test_tools()
+    
+    # First LLM call with tools
+    response = await model_client.generate_chat_with_tools(
         messages=llm_messages,
+        tools=tools,
         temperature=0.7,
         max_tokens=1000
     )
     
+    # Check if LLM wants to use tools
+    should_close_connection = False
+    if 'tool_calls' in response and response['tool_calls']:
+        logger.info(f"LLM requested {len(response['tool_calls'])} tool calls")
+        
+        # Add assistant message with tool calls to history
+        assistant_message = {
+            "role": "assistant",
+            "content": response.get('content', ""),
+            "tool_calls": response['tool_calls']
+        }
+        llm_messages.append(assistant_message)
+        
+        # Execute each tool call
+        for tool_call in response['tool_calls']:
+            tool_name = tool_call['function']['name']
+            tool_args = json.loads(tool_call['function']['arguments'])
+            
+            logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+            
+            # Execute the tool
+            tool_result = tool_executor.execute_tool(tool_name, tool_args)
+            
+            # Check if tool wants to close connection
+            if tool_result.get('action') == 'close_connection':
+                should_close_connection = True
+                assistant_text = tool_result.get('message', 'Goodbye!')
+            else:
+                # Add tool result to messages for LLM to process
+                tool_message = {
+                    "role": "tool",
+                    "tool_call_id": tool_call['id'],
+                    "content": json.dumps(tool_result)
+                }
+                llm_messages.append(tool_message)
+                
+                # Second LLM call with tool results
+                final_response = await model_client.generate_chat(
+                    messages=llm_messages,
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+                
+                assistant_text = final_response
+    else:
+        # No tools needed, use response as-is
+        assistant_text = response.get('content', '')
+    
     # Add assistant response to history
     session_manager.add_message(session_id, "assistant", assistant_text)
     
-    # Build bot message (simple text for now, can add action detection later)
+    # Build bot message
     bot_message = {
         "msg_type": "text",
         "data": {
@@ -122,11 +186,17 @@ async def process_message(session_id: str, user_message: str) -> dict:
         }
     }
     
-    return {
+    result = {
         "type": "message",
         "bot_message": bot_message,
         "session_id": session_id
     }
+    
+    # Add close flag if needed
+    if should_close_connection:
+        result["close_connection"] = True
+    
+    return result
 
 
 @router.websocket("/ws")
@@ -217,6 +287,15 @@ async def websocket_endpoint(
                         
                         # Send response
                         await websocket.send_json(response)
+                        
+                        # Check if tool requested connection close
+                        if response.get("close_connection"):
+                            logger.info(f"Tool requested connection close for session {session_id}")
+                            # Give a brief moment for message delivery
+                            await asyncio.sleep(0.5)
+                            # Close the connection gracefully
+                            await websocket.close(code=1000, reason="User ended conversation")
+                            break  # Exit the message loop
                 
                 elif message_type == "ping":
                     # Keep-alive ping

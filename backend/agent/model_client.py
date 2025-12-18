@@ -212,6 +212,88 @@ class ModelClient:
         except Exception as e:
             raise Exception(f"LLM streaming failed: {str(e)}") from e
     
+    async def generate_chat_with_tools(
+        self,
+        messages: List[Dict[str, str]],
+        tools: List[Dict[str, Any]],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs: Any
+    ) -> Dict[str, Any]:
+        """
+        Generate a chat completion with tool calling support.
+        
+        Args:
+            messages: List of message dicts with "role" and "content" keys
+            tools: List of tool definitions in OpenAI format
+            temperature: Override default temperature
+            max_tokens: Override default max_tokens
+            **kwargs: Additional parameters
+        
+        Returns:
+            Dict with 'content' (str) and optional 'tool_calls' (list)
+        
+        Raises:
+            Exception: If the LLM call fails
+        """
+        try:
+            response = completion(
+                model=self.model,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",  # Let LLM decide when to use tools
+                temperature=temperature or self.temperature,
+                max_tokens=max_tokens or self.max_tokens,
+                **kwargs
+            )
+            
+            # Extract the response
+            if hasattr(response, 'choices') and len(response.choices) > 0:
+                choice = response.choices[0]
+                message = choice.message
+                
+                result = {}
+                
+                # Get text content
+                if hasattr(message, 'content') and message.content:
+                    result['content'] = message.content
+                else:
+                    result['content'] = ""
+                
+                # Get tool calls if present
+                if hasattr(message, 'tool_calls') and message.tool_calls:
+                    result['tool_calls'] = []
+                    for tool_call in message.tool_calls:
+                        result['tool_calls'].append({
+                            'id': tool_call.id,
+                            'type': tool_call.type,
+                            'function': {
+                                'name': tool_call.function.name,
+                                'arguments': tool_call.function.arguments
+                            }
+                        })
+                
+                return result
+                
+            elif isinstance(response, dict) and "choices" in response:
+                choice = response["choices"][0]
+                message = choice.get("message", {})
+                
+                result = {
+                    'content': message.get("content", "")
+                }
+                
+                if "tool_calls" in message:
+                    result['tool_calls'] = message["tool_calls"]
+                
+                return result
+                
+            else:
+                raise ValueError(f"Unexpected response format: {response}")
+                
+        except Exception as e:
+            raise Exception(f"LLM generation with tools failed: {str(e)}") from e
+    
     def get_model_info(self) -> Dict[str, Any]:
         """
         Get information about the current model configuration.
