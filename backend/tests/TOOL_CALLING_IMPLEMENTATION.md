@@ -12,7 +12,7 @@ A complete tool calling system with a "hang up" tool that detects when users wan
 - Includes placeholders for future tools (search_doctors, search_clinics)
 
 ### 2. **backend/tools/tool_executor.py** (NEW)
-- Executes tool calls from the LLM
+- Executes tool calls from the LLM ikkkk
 - `end_conversation` tool returns:
   - Success flag
   - Action: `close_connection`
