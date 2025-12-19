@@ -18,6 +18,11 @@ from utils.data_loader import (
     load_general_info,
     search_doctors,
 )
+from database.db_service import (
+    store_session_info_background,
+    store_conversation_history_background,
+    finalize_session_background,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +93,23 @@ async def process_message(session_id: str, user_message: str) -> dict:
     model_client = get_model_client()
     tool_executor = get_tool_executor()
     
+    # Get session info before adding message (for message_order calculation)
+    session = session_manager.get_session(session_id)
+    client_id = session.get("client_id") if session else None
+    message_order = len(session.get("messages", [])) if session else 0
+    
     # Add user message to history
     session_manager.add_message(session_id, "user", user_message)
+    
+    # Store conversation history in database (async, non-blocking)
+    if client_id:
+        store_conversation_history_background(
+            session_id=session_id,
+            client_id=client_id,
+            role="user",
+            content=user_message,
+            message_order=message_order + 1,  # +1 because we just added the message
+        )
     
     # Get conversation history
     history = session_manager.get_messages(session_id)
@@ -175,8 +195,22 @@ You have access to tools that can perform actions. When appropriate, use these t
         # No tools needed, use response as-is
         assistant_text = response.get('content', '')
     
+    # Get message order before adding assistant message
+    session = session_manager.get_session(session_id)
+    message_order = len(session.get("messages", [])) if session else 0
+    
     # Add assistant response to history
     session_manager.add_message(session_id, "assistant", assistant_text)
+    
+    # Store assistant message in database (async, non-blocking)
+    if client_id:
+        store_conversation_history_background(
+            session_id=session_id,
+            client_id=client_id,
+            role="assistant",
+            content=assistant_text,
+            message_order=message_order + 1,  # +1 because we just added the message
+        )
     
     # Build bot message
     bot_message = {
@@ -246,6 +280,26 @@ async def websocket_endpoint(
         session_manager.register_connection(session_id, websocket)
         
         logger.info(f"WebSocket connected: client={client_id}, session={session_id}")
+        
+        # Store session_info in database (async, non-blocking)
+        # Extract connection metadata if available
+        client_host = websocket.client.host if websocket.client else None
+        client_port = websocket.client.port if websocket.client else None
+        ip_address = client_host
+        
+        # Try to get user agent from headers if available
+        user_agent = None
+        if hasattr(websocket, 'headers'):
+            user_agent = websocket.headers.get('user-agent')
+        
+        # Store session info on connect (background task, won't block)
+        store_session_info_background(
+            session_id=session_id,
+            client_id=client_id,
+            started_at=None,  # Will default to now
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
         
         # Send welcome message only for new sessions (no existing messages)
         session = session_manager.get_session(session_id)
@@ -333,6 +387,12 @@ async def websocket_endpoint(
     finally:
         # Cleanup
         session_manager.unregister_connection(session_id)
+        
+        # Finalize session in database (async, non-blocking)
+        # This will update ended_at and last_activity_at
+        if session_id:
+            finalize_session_background(session_id)
+        
         logger.info(f"WebSocket connection closed: session={session_id}")
 
 
