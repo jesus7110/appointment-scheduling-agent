@@ -7,10 +7,15 @@ This module provides a unified interface to interact with various LLM providers
 To switch providers, simply change the LLM_PROVIDER and LLM_MODEL environment variables.
 """
 import os
+import re
+import json
+import logging
 from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 import litellm
 from litellm import completion
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -212,6 +217,83 @@ class ModelClient:
         except Exception as e:
             raise Exception(f"LLM streaming failed: {str(e)}") from e
     
+    def _parse_kimi_tool_calls(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Parse Kimi model's special token format for tool calls.
+        
+        Format:
+        <|tool_calls_section_begin|>
+        <|tool_call_begin|>functions.function_name:1
+        <|tool_call_argument_begin|>{"arg1": "value1", ...}
+        <|tool_call_end|>
+        <|tool_calls_section_end|>
+        
+        Args:
+            content: The response content that may contain tool call tokens
+        
+        Returns:
+            List of tool calls in standard format, or empty list if none found
+        """
+        tool_calls = []
+        
+        # Check if content contains tool call tokens
+        if "<|tool_calls_section_begin|>" not in content:
+            return []
+        
+        # Extract tool calls section
+        pattern = r'<\|tool_calls_section_begin\|>(.*?)<\|tool_calls_section_end\|>'
+        match = re.search(pattern, content, re.DOTALL)
+        
+        if not match:
+            return []
+        
+        tool_calls_section = match.group(1)
+        
+        # Extract individual tool calls
+        # Pattern: <|tool_call_begin|>functions.function_name:1<|tool_call_argument_begin|>{...}<|tool_call_end|>
+        tool_call_pattern = r'<\|tool_call_begin\|>functions\.([^:]+):\d+<\|tool_call_argument_begin\|>(.*?)<\|tool_call_end\|>'
+        tool_call_matches = re.finditer(tool_call_pattern, tool_calls_section, re.DOTALL)
+        
+        for idx, tool_match in enumerate(tool_call_matches):
+            function_name = tool_match.group(1)
+            arguments_str = tool_match.group(2).strip()
+            
+            # Parse JSON arguments
+            try:
+                arguments = json.loads(arguments_str)
+            except json.JSONDecodeError as e:
+                # If JSON parsing fails, log and skip this tool call
+                logger.warning(f"Failed to parse tool call arguments for {function_name}: {e}")
+                continue
+            
+            # Create tool call in standard format
+            tool_call = {
+                'id': f"call_{idx}_{function_name}",
+                'type': 'function',
+                'function': {
+                    'name': function_name,
+                    'arguments': json.dumps(arguments, ensure_ascii=False)
+                }
+            }
+            tool_calls.append(tool_call)
+        
+        return tool_calls
+    
+    def _clean_content_from_tool_calls(self, content: str) -> str:
+        """
+        Remove tool call tokens from content, leaving only the text.
+        
+        Args:
+            content: The response content that may contain tool call tokens
+        
+        Returns:
+            Cleaned content without tool call tokens
+        """
+        # Remove tool calls section entirely
+        pattern = r'<\|tool_calls_section_begin\|>.*?<\|tool_calls_section_end\|>'
+        cleaned = re.sub(pattern, '', content, flags=re.DOTALL)
+        return cleaned.strip()
+    
     async def generate_chat_with_tools(
         self,
         messages: List[Dict[str, str]],
@@ -255,16 +337,50 @@ class ModelClient:
                 result = {}
                 
                 # Get text content
+                raw_content = ""
                 if hasattr(message, 'content') and message.content:
-                    result['content'] = message.content
-                else:
-                    result['content'] = ""
+                    raw_content = message.content
                 
-                # Get tool calls if present
-                if hasattr(message, 'tool_calls') and message.tool_calls:
-                    result['tool_calls'] = []
+                # Check if this is a Kimi model (uses special token format)
+                is_kimi_model = "kimi" in self.model.lower() or "moonshotai" in self.model.lower()
+                
+                # Parse tool calls from content if using Kimi format
+                tool_calls = []
+                if is_kimi_model and raw_content:
+                    # Try to parse Kimi tool call format
+                    tool_calls = self._parse_kimi_tool_calls(raw_content)
+                    logger.info(f"Kimi model detected: {is_kimi_model}, Raw content length: {len(raw_content)}, Tool calls found: {len(tool_calls)}")
+                    if tool_calls:
+                        # Remove tool call tokens from content
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                        logger.info(f"Cleaned content: '{cleaned_content[:100]}...' (removed tool call tokens)")
+                    elif "<|tool_calls_section_begin|>" in raw_content:
+                        # Tool call tokens detected but parsing failed - still clean them
+                        logger.warning("Tool call tokens detected but parsing failed. Cleaning content anyway.")
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                    else:
+                        result['content'] = raw_content
+                elif raw_content and "<|tool_calls_section_begin|>" in raw_content:
+                    # Even if not detected as Kimi model, try to parse if tokens are present
+                    logger.info("Tool call tokens found but model not detected as Kimi. Attempting to parse anyway.")
+                    tool_calls = self._parse_kimi_tool_calls(raw_content)
+                    if tool_calls:
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                    else:
+                        # Clean tokens even if parsing failed
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                else:
+                    result['content'] = raw_content
+                
+                # Get tool calls from standard format (if not already parsed from Kimi format)
+                if not tool_calls and hasattr(message, 'tool_calls') and message.tool_calls:
+                    tool_calls = []
                     for tool_call in message.tool_calls:
-                        result['tool_calls'].append({
+                        tool_calls.append({
                             'id': tool_call.id,
                             'type': tool_call.type,
                             'function': {
@@ -273,18 +389,57 @@ class ModelClient:
                             }
                         })
                 
+                if tool_calls:
+                    result['tool_calls'] = tool_calls
+                
                 return result
                 
             elif isinstance(response, dict) and "choices" in response:
                 choice = response["choices"][0]
                 message = choice.get("message", {})
                 
-                result = {
-                    'content': message.get("content", "")
-                }
+                raw_content = message.get("content", "")
                 
-                if "tool_calls" in message:
+                # Check if this is a Kimi model
+                is_kimi_model = "kimi" in self.model.lower() or "moonshotai" in self.model.lower()
+                
+                result = {}
+                tool_calls = []
+                
+                # Parse tool calls from content if using Kimi format
+                if is_kimi_model and raw_content:
+                    tool_calls = self._parse_kimi_tool_calls(raw_content)
+                    logger.info(f"Kimi model detected (dict format): {is_kimi_model}, Raw content length: {len(raw_content)}, Tool calls found: {len(tool_calls)}")
+                    if tool_calls:
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                        logger.info(f"Cleaned content: '{cleaned_content[:100]}...' (removed tool call tokens)")
+                    elif "<|tool_calls_section_begin|>" in raw_content:
+                        # Tool call tokens detected but parsing failed - still clean them
+                        logger.warning("Tool call tokens detected but parsing failed. Cleaning content anyway.")
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                    else:
+                        result['content'] = raw_content
+                elif raw_content and "<|tool_calls_section_begin|>" in raw_content:
+                    # Even if not detected as Kimi model, try to parse if tokens are present
+                    logger.info("Tool call tokens found but model not detected as Kimi. Attempting to parse anyway.")
+                    tool_calls = self._parse_kimi_tool_calls(raw_content)
+                    if tool_calls:
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                    else:
+                        # Clean tokens even if parsing failed
+                        cleaned_content = self._clean_content_from_tool_calls(raw_content)
+                        result['content'] = cleaned_content
+                else:
+                    result['content'] = raw_content
+                
+                # Get tool calls from standard format
+                if not tool_calls and "tool_calls" in message:
                     result['tool_calls'] = message["tool_calls"]
+                elif tool_calls:
+                    result['tool_calls'] = tool_calls
                 
                 return result
                 

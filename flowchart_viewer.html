@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Agent Flow Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        .diagram-container {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .mermaid {
+            text-align: center;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .note strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <h1>Appointment Scheduling Agent - Complete Flow Analysis</h1>
+    
+    <div class="note">
+        <strong>Note:</strong> This interactive viewer displays the complete flow analysis of the appointment scheduling agent. 
+        Scroll down to see different aspects of the system architecture.
+    </div>
+
+    <h2>1. System Architecture Flowchart</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+flowchart TD
+    Start([User Sends Message]) --> WS[WebSocket Endpoint]
+    WS --> SM[Session Manager]
+    SM --> |Get/Create Session| Session{Session Exists?}
+    Session -->|No| CreateSession[Create New Session]
+    Session -->|Yes| GetSession[Get Existing Session]
+    CreateSession --> AddUserMsg[Add User Message to Session]
+    GetSession --> AddUserMsg
+    
+    AddUserMsg --> StoreDB[(Store in DB<br/>conversation_history)]
+    StoreDB --> BuildPrompt[Build System Prompt]
+    
+    BuildPrompt --> |Include| Context[Clinic Info<br/>Current Date/Time<br/>Available Tools]
+    Context --> GetHistory[Get Conversation History]
+    
+    GetHistory --> |From Session Manager| History[Message History Array<br/>role: user/assistant<br/>content: text]
+    
+    History --> LLM1[LLM Call #1<br/>generate_chat_with_tools]
+    LLM1 --> |Input| Messages[Formatted Messages<br/>+ System Prompt<br/>+ Tool Definitions]
+    
+    Messages --> LLMDecision{LLM Decides}
+    
+    LLMDecision -->|No Tools| DirectResponse[Generate Direct Response]
+    LLMDecision -->|Use Tools| ToolCalls[Extract Tool Calls]
+    
+    ToolCalls --> ToolLoop{For Each Tool Call}
+    
+    ToolLoop --> TE[Tool Executor]
+    TE --> ToolRouter{Tool Type?}
+    
+    ToolRouter -->|Discovery| DiscTools[search_doctors<br/>search_clinics<br/>get_doctor_details<br/>get_clinic_details]
+    ToolRouter -->|Booking| BookTools[check_booking_readiness<br/>book_appointment]
+    ToolRouter -->|Query| QueryTools[get_appointment<br/>find_appointments<br/>cancel_appointment]
+    ToolRouter -->|Session| EndTool[end_conversation]
+    
+    DiscTools --> DataLoader[Data Loader<br/>Load from JSON files]
+    DataLoader --> |Return| DoctorData[Doctor/Clinic Data]
+    
+    BookTools --> CheckReadiness{check_booking_readiness?}
+    CheckReadiness -->|Yes| Validate[Validate Booking Data<br/>Check 7 Required Fields]
+    Validate --> |Missing Fields| MissingFields[Return Missing Fields List]
+    Validate --> |All Present| Ready[Return Ready Status]
+    
+    CheckReadiness -->|No, book_appointment| BookFunc[create_appointment Function]
+    BookFunc --> ValidateBooking[Validate Again]
+    ValidateBooking --> |Invalid| Error[Return Error]
+    ValidateBooking --> |Valid| GenerateID[Generate Appointment ID<br/>APP-XXXXX]
+    GenerateID --> GenerateCode[Generate Confirmation Code<br/>6-char alphanumeric]
+    GenerateCode --> StoreAppt[(Store in DB<br/>appointments table)]
+    StoreAppt --> Success[Return Success + Appointment Details]
+    
+    QueryTools --> DBQuery[(Query Database<br/>appointments table)]
+    DBQuery --> QueryResult[Return Appointment Data]
+    
+    EndTool --> CloseConn[Set close_connection flag]
+    
+    DoctorData --> ToolResult[Tool Result JSON]
+    MissingFields --> ToolResult
+    Ready --> ToolResult
+    Error --> ToolResult
+    Success --> ToolResult
+    QueryResult --> ToolResult
+    CloseConn --> ToolResult
+    
+    ToolResult --> AddToolMsg[Add Tool Result to Messages<br/>role: tool<br/>content: JSON result]
+    AddToolMsg --> LLM2{More Tools?}
+    
+    LLM2 -->|Yes| ToolLoop
+    LLM2 -->|No| LLM2Call[LLM Call #2<br/>generate_chat]
+    
+    LLM2Call --> |Input| MessagesWithResults[Messages + Tool Results]
+    MessagesWithResults --> FinalResponse[Generate Final Response]
+    
+    DirectResponse --> AddAssistantMsg[Add Assistant Message to Session]
+    FinalResponse --> AddAssistantMsg
+    
+    AddAssistantMsg --> StoreDB2[(Store in DB<br/>conversation_history)]
+    StoreDB2 --> FormatResponse[Format Bot Message]
+    FormatResponse --> SendWS[Send to WebSocket]
+    
+    SendWS --> CloseCheck{Close Connection?}
+    CloseCheck -->|Yes| CloseWS[Close WebSocket]
+    CloseCheck -->|No| WaitNext[Wait for Next Message]
+    
+    CloseWS --> End([End])
+    WaitNext --> Start
+    
+    style Start fill:#e1f5ff
+    style End fill:#ffe1f5
+    style StoreDB fill:#fff4e1
+    style StoreDB2 fill:#fff4e1
+    style StoreAppt fill:#fff4e1
+    style DBQuery fill:#fff4e1
+    style LLM1 fill:#e1ffe1
+    style LLM2Call fill:#e1ffe1
+    style TE fill:#ffe1e1
+    style Validate fill:#fff9e1
+    style Session fill:#f0e1ff
+        </div>
+    </div>
+
+    <h2>2. Data Flow & Storage Architecture</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+flowchart LR
+    subgraph "Frontend"
+        UI[React UI]
+        WSClient[WebSocket Client]
+    end
+    
+    subgraph "Backend - WebSocket Layer"
+        WSEndpoint[WebSocket Endpoint<br/>/ws]
+        ProcessMsg[process_message Function]
+    end
+    
+    subgraph "Backend - Session Management"
+        SM[Session Manager<br/>In-Memory]
+        SessionData[Session Dict<br/>- client_id<br/>- messages: []<br/>- metadata: {}<br/>- created_at<br/>- last_activity]
+    end
+    
+    subgraph "Backend - LLM Layer"
+        ModelClient[Model Client<br/>LiteLLM]
+        LLM[LLM Provider<br/>OpenAI/Groq/Gemini]
+        Tools[Tool Definitions<br/>10 Tools Available]
+    end
+    
+    subgraph "Backend - Tool Execution"
+        ToolExec[Tool Executor]
+        DataLoader[Data Loader<br/>JSON Files]
+        ApptMgr[Appointment Manager]
+    end
+    
+    subgraph "Data Storage"
+        Memory[(In-Memory<br/>Session Manager)]
+        DB[(PostgreSQL Database)]
+        Files[(JSON Files<br/>doctor_schedule.json<br/>clinic_info.json)]
+    end
+    
+    UI -->|WebSocket| WSClient
+    WSClient <-->|Bidirectional| WSEndpoint
+    WSEndpoint --> ProcessMsg
+    ProcessMsg --> SM
+    SM -->|Read/Write| SessionData
+    SessionData -.->|Stored In| Memory
+    
+    ProcessMsg --> ModelClient
+    ModelClient --> LLM
+    ModelClient --> Tools
+    LLM -->|Tool Calls| ToolExec
+    ToolExec --> DataLoader
+    ToolExec --> ApptMgr
+    
+    DataLoader -->|Read| Files
+    ApptMgr -->|Read/Write| DB
+    
+    ProcessMsg -.->|Async Store| DB
+    SM -.->|Async Store| DB
+    
+    style Memory fill:#fff4e1
+    style DB fill:#fff4e1
+    style Files fill:#fff4e1
+    style SessionData fill:#e1f5ff
+        </div>
+    </div>
+
+    <h2>3. Booking Data Collection & Tracking Flow</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+flowchart TD
+    Start([User: I want to book]) --> LLM1[LLM Analyzes Request]
+    LLM1 --> |Needs Doctor Info| Tool1[search_doctors]
+    Tool1 --> Result1[Doctor List Returned]
+    Result1 --> LLM2[LLM: Which doctor?]
+    
+    LLM2 --> UserResp1[User: Dr. Smith]
+    UserResp1 --> |Extract| Extract1[LLM Extracts:<br/>doctor_id from context]
+    
+    Extract1 --> Store1[Stored in Conversation History<br/>Session.messages array]
+    Store1 --> LLM3[LLM: What date?]
+    
+    LLM3 --> UserResp2[User: Tomorrow]
+    UserResp2 --> |Extract| Extract2[LLM Extracts:<br/>appointment_date<br/>calculated from context]
+    
+    Extract2 --> Store2[Stored in Conversation History]
+    Store2 --> LLM4[LLM: What time?]
+    
+    LLM4 --> UserResp3[User: 10 AM]
+    UserResp3 --> |Extract| Extract3[LLM Extracts:<br/>appointment_time]
+    
+    Extract3 --> Store3[Stored in Conversation History]
+    Store3 --> LLM5[LLM: Your name?]
+    
+    LLM5 --> UserResp4[User: John Doe]
+    UserResp4 --> |Extract| Extract4[LLM Extracts:<br/>patient_name]
+    
+    Extract4 --> Store4[Stored in Conversation History]
+    Store4 --> LLM6[LLM: Phone number?]
+    
+    LLM6 --> UserResp5[User: +1234567890]
+    UserResp5 --> |Extract| Extract5[LLM Extracts:<br/>patient_phone]
+    
+    Extract5 --> Store5[Stored in Conversation History]
+    Store5 --> LLM7[LLM: Email?]
+    
+    LLM7 --> UserResp6[User: john@example.com]
+    UserResp6 --> |Extract| Extract6[LLM Extracts:<br/>patient_email]
+    
+    Extract6 --> Store6[Stored in Conversation History]
+    Store6 --> CheckTool[LLM Calls:<br/>check_booking_readiness]
+    
+    CheckTool --> Validate[Validate All 7 Fields]
+    Validate --> |Missing| Missing[Return Missing Fields]
+    Missing --> LLMAsk[LLM Asks for Missing Field]
+    LLMAsk --> UserResp7[User Provides Missing Data]
+    UserResp7 --> Store7[Update Conversation History]
+    Store7 --> CheckTool
+    
+    Validate --> |All Present| Ready[Return Ready Status]
+    Ready --> BookTool[LLM Calls:<br/>book_appointment]
+    
+    BookTool --> BookFunc[create_appointment]
+    BookFunc --> ValidateAgain[Validate Again]
+    ValidateAgain --> |Invalid| Error[Return Error]
+    ValidateAgain --> |Valid| Create[Create Appointment in DB]
+    
+    Create --> Success[Return Success +<br/>Appointment ID +<br/>Confirmation Code]
+    Success --> LLMConfirm[LLM Generates<br/>Confirmation Message]
+    LLMConfirm --> User[User Sees Confirmation]
+    
+    style Store1 fill:#fff4e1
+    style Store2 fill:#fff4e1
+    style Store3 fill:#fff4e1
+    style Store4 fill:#fff4e1
+    style Store5 fill:#fff4e1
+    style Store6 fill:#fff4e1
+    style Store7 fill:#fff4e1
+    style Validate fill:#e1ffe1
+    style Create fill:#e1ffe1
+        </div>
+    </div>
+
+    <h2>4. Tool Access Flow</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+flowchart LR
+    subgraph "Tool Categories"
+        Disc[Discovery Tools]
+        Book[Booking Tools]
+        Query[Query Tools]
+        Session[Session Tools]
+    end
+    
+    Disc --> D1[search_doctors]
+    Disc --> D2[search_clinics]
+    Disc --> D3[get_doctor_details]
+    Disc --> D4[get_clinic_details]
+    
+    Book --> B1[check_booking_readiness]
+    Book --> B2[book_appointment]
+    
+    Query --> Q1[get_appointment]
+    Query --> Q2[find_appointments]
+    Query --> Q3[cancel_appointment]
+    
+    Session --> S1[end_conversation]
+    
+    D1 --> DL[Data Loader<br/>JSON Files]
+    D2 --> DL
+    D3 --> DL
+    D4 --> DL
+    
+    B1 --> AM[Appointment Manager<br/>Validation]
+    B2 --> AM
+    
+    Q1 --> DB[(Database)]
+    Q2 --> DB
+    Q3 --> DB
+    
+    S1 --> WS[WebSocket<br/>Close Connection]
+    
+    style Disc fill:#e1f5ff
+    style Book fill:#ffe1e1
+    style Query fill:#e1ffe1
+    style Session fill:#fff4e1
+    style DL fill:#fff9e1
+    style AM fill:#fff9e1
+    style DB fill:#fff4e1
+        </div>
+    </div>
+
+    <h2>5. Agent Data Tracking Mechanism</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+flowchart TD
+    subgraph "How Agent Tracks Collected Data"
+        Method[No Explicit State Machine]
+        Method --> Context[Uses Conversation Context]
+        
+        Context --> History[Conversation History<br/>Session.messages array]
+        History --> LLMReads[LLM Reads Full History<br/>on Each Request]
+        
+        LLMReads --> Extract[LLM Extracts Information<br/>from Previous Messages]
+        Extract --> ToolCall[Uses Tools to Validate]
+        
+        ToolCall --> CheckTool[check_booking_readiness Tool]
+        CheckTool --> Validation[validate_booking_data Function]
+        
+        Validation --> RequiredFields[7 Required Fields:<br/>1. doctor_id<br/>2. clinic_id<br/>3. patient_name<br/>4. patient_phone<br/>5. patient_email<br/>6. appointment_date<br/>7. appointment_time]
+        
+        RequiredFields --> CheckFields{Check Each Field}
+        CheckFields -->|Present| Count[Count Collected]
+        CheckFields -->|Missing| List[Return Missing List]
+        
+        Count --> AllCollected{All 7 Present?}
+        AllCollected -->|Yes| Ready[Return ready: true]
+        AllCollected -->|No| Missing[Return ready: false<br/>+ missing_fields array]
+        
+        Ready --> LLMKnows[LLM Knows to Call<br/>book_appointment]
+        Missing --> LLMAsks[LLM Asks for<br/>Missing Fields]
+    end
+    
+    style Method fill:#ffe1e1
+    style Context fill:#e1f5ff
+    style History fill:#fff4e1
+    style Validation fill:#e1ffe1
+    style RequiredFields fill:#fff9e1
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>Key Insight:</strong> The agent does NOT maintain an explicit state machine. Instead, it relies on conversation history 
+        stored in Session Manager, and the LLM extracts information from previous messages using natural language understanding.
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
+

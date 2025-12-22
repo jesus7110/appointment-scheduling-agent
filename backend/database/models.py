@@ -65,10 +65,11 @@ class Appointment(Base):
     duration_minutes = Column(Integer, nullable=False, default=30)
     
     # Status and confirmation
+    # Use String instead of Enum to match the database schema (VARCHAR with CHECK constraint)
     status = Column(
-        SQLEnum(AppointmentStatus),
+        String(20),
         nullable=False,
-        default=AppointmentStatus.CONFIRMED,
+        default=AppointmentStatus.CONFIRMED.value,
         index=True
     )
     confirmation_code = Column(String(50), unique=True, nullable=False, index=True)
